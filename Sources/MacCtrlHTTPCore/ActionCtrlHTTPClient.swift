@@ -62,6 +62,7 @@ public struct QueueCapacityReceipt: Decodable, Sendable {
 
 public enum ActionClientError: Error, LocalizedError, Sendable, Equatable {
     case invalidDeviceAddress
+    case invalidHoldDuration
     case invalidResponse
     case rejected(statusCode: Int)
 
@@ -69,6 +70,8 @@ public enum ActionClientError: Error, LocalizedError, Sendable, Equatable {
         switch self {
         case .invalidDeviceAddress:
             "设备 IP 无效，请检查地址"
+        case .invalidHoldDuration:
+            "按住时长必须为 120–5000 ms"
         case .invalidResponse:
             "设备返回了无法识别的响应"
         case .rejected(let statusCode):
@@ -137,13 +140,17 @@ public struct ActionCtrlHTTPClient {
     }
 
     @discardableResult
-    public func tap(_ button: RemoteButton) async throws -> TapReceipt {
+    public func tap(_ button: RemoteButton, holdMilliseconds: Int? = nil) async throws -> TapReceipt {
+        if let holdMilliseconds, !(120...5000).contains(holdMilliseconds) {
+            throw ActionClientError.invalidHoldDuration
+        }
         var request = URLRequest(url: endpoint("tap"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(TapRequest(
             button: button.rawValue,
-            requestID: "mac-\(UUID().uuidString.lowercased())"
+            requestID: "mac-\(UUID().uuidString.lowercased())",
+            holdMilliseconds: holdMilliseconds
         ))
         addAuthentication(to: &request)
 
@@ -176,10 +183,12 @@ public struct ActionCtrlHTTPClient {
 private struct TapRequest: Encodable {
     let button: String
     let requestID: String
+    let holdMilliseconds: Int?
 
     enum CodingKeys: String, CodingKey {
         case button
         case requestID = "request_id"
+        case holdMilliseconds = "hold_ms"
     }
 }
 

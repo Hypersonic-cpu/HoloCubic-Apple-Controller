@@ -32,8 +32,11 @@ struct ControlPanelView: View {
                 .onTapGesture { leaveInputMode() }
         }
         .background(KeyboardShortcutCapture(
-            action: { send($0) },
-            onEscape: { leaveInputMode() },
+            action: { send($0, isAutoRepeat: $1) },
+            leaveInputMode: { leaveInputMode() },
+            onEscape: { isLongPress in
+                send(.home, holdMilliseconds: isLongPress ? 1000 : nil)
+            },
             onBufferStep: { delta in
                 guard focusedInput == .buffer else { return false }
                 model.adjustBufferSize(by: delta)
@@ -228,7 +231,7 @@ struct ControlPanelView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 6) {
-                settingLabel("KEY DELAY")
+                settingLabel("MIN INTERVAL")
                 HStack(spacing: 4) {
                     TextField("500", value: $model.keyDelayMilliseconds, format: .number)
                         .textFieldStyle(.plain)
@@ -344,9 +347,13 @@ struct ControlPanelView: View {
         .help(model.connectionMessage)
     }
 
-    private func send(_ button: RemoteButton) {
+    private func send(
+        _ button: RemoteButton,
+        holdMilliseconds: Int? = nil,
+        isAutoRepeat: Bool = false
+    ) {
         leaveInputMode()
-        model.send(button)
+        model.send(button, holdMilliseconds: holdMilliseconds, isAutoRepeat: isAutoRepeat)
     }
 
     private func leaveInputMode() {
@@ -496,12 +503,13 @@ private struct SoftPressStyle: ButtonStyle {
 }
 
 private struct KeyboardShortcutCapture: NSViewRepresentable {
-    let action: (RemoteButton) -> Void
-    let onEscape: () -> Void
+    let action: (RemoteButton, Bool) -> Void
+    let leaveInputMode: () -> Void
+    let onEscape: (Bool) -> Void
     let onBufferStep: (Int) -> Bool
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(action: action, onEscape: onEscape, onBufferStep: onBufferStep)
+        Coordinator(action: action, leaveInputMode: leaveInputMode, onEscape: onEscape, onBufferStep: onBufferStep)
     }
 
     func makeNSView(context: Context) -> NSView {
@@ -513,6 +521,7 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.action = action
+        context.coordinator.leaveInputMode = leaveInputMode
         context.coordinator.onEscape = onEscape
         context.coordinator.onBufferStep = onBufferStep
     }
@@ -523,18 +532,23 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
 
     final class Coordinator {
         weak var view: NSView?
-        var action: (RemoteButton) -> Void
-        var onEscape: () -> Void
+        var action: (RemoteButton, Bool) -> Void
+        var leaveInputMode: () -> Void
+        var onEscape: (Bool) -> Void
         var onBufferStep: (Int) -> Bool
         private var monitor: Any?
+        private var keyUpMonitor: Any?
         private var mouseMonitor: Any?
+        private var escapeKeyDownAt: TimeInterval?
 
         init(
-            action: @escaping (RemoteButton) -> Void,
-            onEscape: @escaping () -> Void,
+            action: @escaping (RemoteButton, Bool) -> Void,
+            leaveInputMode: @escaping () -> Void,
+            onEscape: @escaping (Bool) -> Void,
             onBufferStep: @escaping (Int) -> Bool
         ) {
             self.action = action
+            self.leaveInputMode = leaveInputMode
             self.onEscape = onEscape
             self.onBufferStep = onBufferStep
         }
@@ -547,11 +561,11 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
                     return event
                 }
                 if event.keyCode == 53 {
-                    if Self.isEditingText(in: window) {
-                        self.onEscape()
-                    }
                     guard !event.isARepeat else { return nil }
-                    self.action(.home)
+                    if Self.isEditingText(in: window) {
+                        self.leaveInputMode()
+                    }
+                    self.escapeKeyDownAt = event.timestamp
                     return nil
                 }
                 if Self.isEditingText(in: window), [126, 125].contains(event.keyCode) {
@@ -559,9 +573,29 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
                     if self.onBufferStep(step) { return nil }
                 }
                 guard !Self.isEditingText(in: window),
-                      !event.isARepeat,
                       let button = Self.button(for: event) else { return event }
-                self.action(button)
+                if event.isARepeat {
+                    switch button {
+                    case .up, .down, .left, .right:
+                        break
+                    default:
+                        return nil
+                    }
+                }
+                self.action(button, event.isARepeat)
+                return nil
+            }
+
+            keyUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyUp) { [weak self] event in
+                guard let self,
+                      let window = self.view?.window,
+                      NSApp.keyWindow === window,
+                      event.keyCode == 53,
+                      let escapeKeyDownAt = self.escapeKeyDownAt else {
+                    return event
+                }
+                self.escapeKeyDownAt = nil
+                self.onEscape(event.timestamp - escapeKeyDownAt >= 0.8)
                 return nil
             }
 
@@ -573,12 +607,12 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
                     return event
                 }
                 guard let field = Self.activeTextField(in: window) else {
-                    self.onEscape()
+                    self.leaveInputMode()
                     return event
                 }
                 let fieldBounds = field.convert(field.bounds, to: nil)
                 if !fieldBounds.contains(event.locationInWindow) {
-                    self.onEscape()
+                    self.leaveInputMode()
                 }
                 return event
             }
@@ -586,9 +620,12 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
 
         func removeMonitor() {
             if let monitor { NSEvent.removeMonitor(monitor) }
+            if let keyUpMonitor { NSEvent.removeMonitor(keyUpMonitor) }
             if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
             monitor = nil
+            keyUpMonitor = nil
             mouseMonitor = nil
+            escapeKeyDownAt = nil
         }
 
         private static func isEditingText(in window: NSWindow) -> Bool {

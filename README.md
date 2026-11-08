@@ -16,13 +16,13 @@ The device IP is entered in the app and automatically saved in its macOS prefere
 ## Use
 
 - Click the four rounded triangle buttons or press the arrow keys.
-- Enter sends A, Escape sends Home, and Space sends B. A/B letter keys remain available as aliases.
+- Enter sends A, Escape sends Home, and Space sends B. A/B letter keys remain available as aliases. A short Escape sends a normal Home tap; holding Escape for at least 800 ms sends one Home press with `hold_ms: 1000` after key release.
 - Enter the `ActionCtrlHTTP` token and device IP. Both are saved in the app's macOS preferences and restored on the next launch. The eye button toggles token visibility.
 - The app checks `GET /remote/api/v1/status` on launch. The settings-row pill checks connectivity and uploads `BUFFER SIZE` through `POST /remote/api/v1/settings` only when it differs from the onboard value.
-- `BUFFER SIZE` is saved locally and on the device (1–32, default 16). `KEY DELAY` is saved locally (0–999 ms, default 500 ms); new key presses inside the interval are ignored instead of queued.
+- `BUFFER SIZE` is saved locally and on the device (1–32, default 16). `MIN INTERVAL` is saved locally (0–999 ms, default 500 ms) and limits macOS directional-key auto-repeat. Separate key presses are not locally discarded by this interval and can fill the Onboard FIFO.
 - Controller buttons use `POST /remote/api/v1/tap` with `X-ActionCtrl-Token`.
 
-The app sends one tap per key-down and ignores keyboard auto-repeat. HTTP is plain text on the local network, matching the device service.
+Arrow key auto-repeat is sent at the configured `MIN INTERVAL`; Enter, Space, and letter-key auto-repeat are ignored. Escape is measured through key-up so a short press remains a tap and a long press can request a timed Home hold. HTTP is plain text on the local network, matching the device service.
 
 ## Tests
 

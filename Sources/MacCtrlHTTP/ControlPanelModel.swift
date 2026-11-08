@@ -211,7 +211,11 @@ final class ControlPanelModel: ObservableObject {
         }
     }
 
-    func send(_ button: RemoteButton) {
+    func send(
+        _ button: RemoteButton,
+        holdMilliseconds: Int? = nil,
+        isAutoRepeat: Bool = false
+    ) {
         guard !token.isEmpty else {
             actionMessage = "先填写 Auth Token"
             return
@@ -223,22 +227,30 @@ final class ControlPanelModel: ObservableObject {
 
         let now = ProcessInfo.processInfo.systemUptime
         let minimumInterval = TimeInterval(keyDelayMilliseconds) / 1_000
-        if minimumInterval > 0,
+        if isAutoRepeat,
+           holdMilliseconds == nil,
+           minimumInterval > 0,
            let lastAcceptedKeyTime,
            now - lastAcceptedKeyTime < minimumInterval {
-            actionMessage = "按键间隔内的输入已忽略"
+            actionMessage = "方向键自动重复受 MIN INTERVAL 限制"
             return
         }
         lastAcceptedKeyTime = now
 
-        actionMessage = "正在发送 \(button.title)…"
+        actionMessage = holdMilliseconds.map {
+            "正在发送 \(button.title) 长按 \($0) ms…"
+        } ?? "正在发送 \(button.title)…"
         Task {
             do {
-                let receipt = try await client.tap(button)
+                let receipt = try await client.tap(button, holdMilliseconds: holdMilliseconds)
                 online = true
-                actionMessage = receipt.duplicate == true
-                    ? "\(button.title) 已去重"
-                    : "\(button.title) 已发送 · 设备已接收"
+                if receipt.duplicate == true {
+                    actionMessage = "\(button.title) 已去重"
+                } else if let holdMilliseconds {
+                    actionMessage = "\(button.title) 长按 \(holdMilliseconds) ms 已发送 · 设备已接收"
+                } else {
+                    actionMessage = "\(button.title) 已发送 · 设备已接收"
+                }
             } catch {
                 online = false
                 connectionMessage = error.localizedDescription
