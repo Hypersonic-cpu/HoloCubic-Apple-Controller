@@ -5,6 +5,7 @@ import SwiftUI
 struct ControlPanelView: View {
     @StateObject private var model = ControlPanelModel()
     @State private var revealsToken = false
+    @FocusState private var focusedInput: InputField?
 
     var body: some View {
         VStack(spacing: 15) {
@@ -28,8 +29,13 @@ struct ControlPanelView: View {
                         .strokeBorder(.white.opacity(0.3), lineWidth: 1)
                 }
                 .shadow(color: .black.opacity(0.2), radius: 24, y: 12)
+                .contentShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
+                .onTapGesture { leaveInputMode() }
         }
-        .background(KeyboardShortcutCapture { model.send($0) }.frame(width: 1, height: 1))
+        .background(KeyboardShortcutCapture(
+            action: { send($0) },
+            onEscape: { leaveInputMode() }
+        ).frame(width: 1, height: 1))
         .onChange(of: model.token) { newValue in model.saveToken(newValue) }
         .onChange(of: model.deviceAddress) { newValue in model.saveDeviceAddress(newValue) }
         .preferredColorScheme(.dark)
@@ -78,11 +84,12 @@ struct ControlPanelView: View {
 
     private var controlSurface: some View {
         HStack(spacing: 24) {
-            DirectionPad { model.send($0) }
+            DirectionPad { send($0) }
             Spacer(minLength: 0)
-            VStack(spacing: 15) {
-                ActionKey(button: .a, tint: .cyan) { model.send(.a) }
-                ActionKey(button: .b, tint: .orange) { model.send(.b) }
+            VStack(spacing: 10) {
+                ActionKey(button: .a, tint: .cyan) { send(.a) }
+                ActionKey(button: .b, tint: .orange) { send(.b) }
+                HomeKey { send(.home) }
             }
             .padding(.trailing, 5)
         }
@@ -115,17 +122,23 @@ struct ControlPanelView: View {
                 Group {
                     if revealsToken {
                         TextField("输入 ActionCtrlHTTP Token", text: $model.token)
+                            .focused($focusedInput, equals: .token)
                     } else {
                         SecureField("输入 ActionCtrlHTTP Token", text: $model.token)
+                            .focused($focusedInput, equals: .token)
                     }
                 }
                 .textFieldStyle(.plain)
                 .font(.system(size: 11, design: .monospaced))
                 .textContentType(.password)
                 .autocorrectionDisabled()
-                .onSubmit { model.confirmToken() }
+                .onSubmit {
+                    leaveInputMode()
+                    model.confirmToken()
+                }
 
                 Button {
+                    leaveInputMode()
                     revealsToken.toggle()
                 } label: {
                     Image(systemName: revealsToken ? "eye.slash" : "eye")
@@ -141,6 +154,7 @@ struct ControlPanelView: View {
                 ConfirmationButton(
                     isLoading: model.isConfirmingToken
                 ) {
+                    leaveInputMode()
                     model.confirmToken()
                 }
             }
@@ -175,9 +189,14 @@ struct ControlPanelView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 11, design: .monospaced))
                     .autocorrectionDisabled()
-                    .onSubmit { model.testConnection() }
+                    .focused($focusedInput, equals: .address)
+                    .onSubmit {
+                        leaveInputMode()
+                        model.testConnection()
+                    }
 
                 ConnectionTestButton(isLoading: model.isTestingConnection) {
+                    leaveInputMode()
                     model.testConnection()
                 }
             }
@@ -206,7 +225,7 @@ struct ControlPanelView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
-            Text("← ↑ ↓ →  ·  A / B")
+            Text("← ↑ ↓ →  ·  A / B · Home")
                 .font(.system(size: 9, weight: .medium, design: .rounded))
                 .foregroundStyle(.tertiary)
                 .fixedSize()
@@ -214,6 +233,24 @@ struct ControlPanelView: View {
         .padding(.bottom, 1)
         .help(model.connectionMessage)
     }
+
+    private func send(_ button: RemoteButton) {
+        leaveInputMode()
+        model.send(button)
+    }
+
+    private func leaveInputMode() {
+        focusedInput = nil
+        if let window = NSApp.keyWindow,
+           window.firstResponder is NSTextView || window.firstResponder is NSTextField {
+            window.makeFirstResponder(nil)
+        }
+    }
+}
+
+private enum InputField: Hashable {
+    case token
+    case address
 }
 
 private struct ConfirmationButton: View {
@@ -282,24 +319,20 @@ private struct DirectionPad: View {
     let action: (RemoteButton) -> Void
 
     var body: some View {
-        VStack(spacing: 3) {
-            HStack {
-                Spacer(minLength: 0)
-                DirectionKey(button: .up, rotation: 0, action: action)
-                Spacer(minLength: 0)
-            }
-            HStack(spacing: 3) {
-                DirectionKey(button: .left, rotation: -90, action: action)
-                Circle().fill(.white.opacity(0.13)).frame(width: 5, height: 5)
-                DirectionKey(button: .right, rotation: 90, action: action)
-            }
-            HStack {
-                Spacer(minLength: 0)
-                DirectionKey(button: .down, rotation: 180, action: action)
-                Spacer(minLength: 0)
-            }
+        ZStack {
+            DirectionKey(button: .up, rotation: 0, action: action)
+                .offset(y: -45)
+            DirectionKey(button: .down, rotation: 180, action: action)
+                .offset(y: 45)
+            DirectionKey(button: .left, rotation: -90, action: action)
+                .offset(x: -45)
+            DirectionKey(button: .right, rotation: 90, action: action)
+                .offset(x: 45)
+            Circle()
+                .fill(.white.opacity(0.13))
+                .frame(width: 5, height: 5)
         }
-        .frame(width: 158, height: 150)
+        .frame(width: 148, height: 148)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("方向键")
     }
@@ -318,7 +351,7 @@ private struct DirectionKey: View {
                     RoundedTriangle().stroke(.white.opacity(0.4), lineWidth: 1)
                 }
                 .rotationEffect(.degrees(rotation))
-                .frame(width: 48, height: 44)
+                .frame(width: 48, height: 48)
                 .contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle())
@@ -381,6 +414,28 @@ private struct ActionKey: View {
     }
 }
 
+private struct HomeKey: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "house.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary.opacity(0.86))
+                .frame(width: 36, height: 36)
+                .background {
+                    Circle()
+                        .fill(Color.white.opacity(0.12))
+                        .overlay(Circle().strokeBorder(Color.white.opacity(0.28), lineWidth: 1))
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(SoftPressStyle())
+        .accessibilityLabel("Home")
+        .help("Home：返回 Launcher")
+    }
+}
+
 private struct SoftPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -392,8 +447,9 @@ private struct SoftPressStyle: ButtonStyle {
 
 private struct KeyboardShortcutCapture: NSViewRepresentable {
     let action: (RemoteButton) -> Void
+    let onEscape: () -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+    func makeCoordinator() -> Coordinator { Coordinator(action: action, onEscape: onEscape) }
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
@@ -404,6 +460,7 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.action = action
+        context.coordinator.onEscape = onEscape
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
@@ -413,42 +470,86 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
     final class Coordinator {
         weak var view: NSView?
         var action: (RemoteButton) -> Void
+        var onEscape: () -> Void
         private var monitor: Any?
+        private var mouseMonitor: Any?
 
-        init(action: @escaping (RemoteButton) -> Void) {
+        init(action: @escaping (RemoteButton) -> Void, onEscape: @escaping () -> Void) {
             self.action = action
+            self.onEscape = onEscape
         }
 
         func installMonitor() {
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self,
                       let window = self.view?.window,
-                      NSApp.keyWindow === window,
-                      !Self.isEditingText(in: window),
-                      !event.isARepeat,
-                      let button = Self.button(forKeyCode: event.keyCode) else {
+                      NSApp.keyWindow === window else {
                     return event
                 }
+                if event.keyCode == 53 {
+                    if Self.isEditingText(in: window) {
+                        self.onEscape()
+                    }
+                    guard !event.isARepeat else { return nil }
+                    self.action(.home)
+                    return nil
+                }
+                guard !Self.isEditingText(in: window),
+                      !event.isARepeat,
+                      let button = Self.button(for: event) else { return event }
                 self.action(button)
                 return nil
+            }
+
+            mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+                guard let self,
+                      let window = self.view?.window,
+                      NSApp.keyWindow === window,
+                      Self.isEditingText(in: window) else {
+                    return event
+                }
+                guard let field = Self.activeTextField(in: window) else {
+                    self.onEscape()
+                    return event
+                }
+                let fieldBounds = field.convert(field.bounds, to: nil)
+                if !fieldBounds.contains(event.locationInWindow) {
+                    self.onEscape()
+                }
+                return event
             }
         }
 
         func removeMonitor() {
             if let monitor { NSEvent.removeMonitor(monitor) }
+            if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
             monitor = nil
+            mouseMonitor = nil
         }
 
         private static func isEditingText(in window: NSWindow) -> Bool {
             window.firstResponder is NSTextView || window.firstResponder is NSTextField
         }
 
-        private static func button(forKeyCode keyCode: UInt16) -> RemoteButton? {
-            switch keyCode {
+        private static func activeTextField(in window: NSWindow) -> NSTextField? {
+            if let field = window.firstResponder as? NSTextField { return field }
+            if let editor = window.firstResponder as? NSTextView {
+                return editor.delegate as? NSTextField
+            }
+            return nil
+        }
+
+        private static func button(for event: NSEvent) -> RemoteButton? {
+            if event.keyCode == 115 {
+                return .home
+            }
+            return switch event.keyCode {
             case 126: .up
             case 125: .down
             case 123: .left
             case 124: .right
+            case 36, 76: .a
+            case 49: .b
             case 0: .a
             case 11: .b
             default: nil

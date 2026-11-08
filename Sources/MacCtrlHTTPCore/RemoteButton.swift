@@ -7,6 +7,7 @@ public enum RemoteButton: String, CaseIterable, Codable, Sendable, Identifiable 
     case right
     case a
     case b
+    case home
 
     public var id: String { rawValue }
 
@@ -18,6 +19,7 @@ public enum RemoteButton: String, CaseIterable, Codable, Sendable, Identifiable 
         case .right: "右"
         case .a: "A"
         case .b: "B"
+        case .home: "Home"
         }
     }
 }

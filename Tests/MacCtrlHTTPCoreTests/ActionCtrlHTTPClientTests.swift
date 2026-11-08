@@ -49,6 +49,23 @@ final class ActionCtrlHTTPClientTests: XCTestCase {
         XCTAssertEqual(request?.value(forHTTPHeaderField: "X-ActionCtrl-Token"), "unit-test-token")
     }
 
+    func testHomeTapUsesHomeButtonName() async throws {
+        let body = Data(#"{"ok":true,"request_id":"mac-home","queued":true}"#.utf8)
+        let transport = MockHTTPTransport(statusCode: 202, body: body)
+        let client = ActionCtrlHTTPClient(
+            baseURL: URL(string: "http://holo.test")!,
+            token: "unit-test-token",
+            transport: transport
+        )
+
+        _ = try await client.tap(.home)
+
+        let request = await transport.capturedRequest()
+        let payload = try XCTUnwrap(request?.httpBody)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: String])
+        XCTAssertEqual(object["button"], "home")
+    }
+
     func testUnauthorizedTapIsReported() async {
         let transport = MockHTTPTransport(statusCode: 401, body: Data(#"{"ok":false}"#.utf8))
         let client = ActionCtrlHTTPClient(
