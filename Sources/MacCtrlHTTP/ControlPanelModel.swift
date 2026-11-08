@@ -1,6 +1,8 @@
 import Combine
 import Foundation
+#if SWIFT_PACKAGE
 import MacCtrlHTTPCore
+#endif
 
 @MainActor
 final class ControlPanelModel: ObservableObject {
@@ -8,11 +10,13 @@ final class ControlPanelModel: ObservableObject {
     @Published var deviceAddress: String
     @Published var bufferSize: Int
     @Published var keyDelayMilliseconds: Int
+    @Published var revealsToken = false
+    @Published private(set) var language: ControllerLanguage
     @Published private(set) var online = false
     @Published private(set) var isCheckingConnection = false
     @Published private(set) var isSyncingSettings = false
     @Published private(set) var connectionMessage: String
-    @Published private(set) var actionMessage = "准备就绪"
+    @Published private(set) var actionMessage: String
     @Published private(set) var queueLength: Int?
     @Published private(set) var onboardBufferSize: Int?
     @Published private(set) var syncSucceeded: Bool?
@@ -39,6 +43,9 @@ final class ControlPanelModel: ObservableObject {
         self.controlSettingsStore = controlSettingsStore
         self.transport = transport
 
+        let loadedLanguage = ControllerLanguage.preferred
+        self.language = loadedLanguage
+        self.actionMessage = loadedLanguage.text(.ready)
         let loadedToken = (try? tokenStore.load()) ?? ""
         let loadedAddress = (try? deviceAddressStore.load()) ?? ""
         self.token = loadedToken
@@ -52,35 +59,54 @@ final class ControlPanelModel: ObservableObject {
         self.lastSavedDeviceAddress = loadedAddress
 
         if loadedAddress.isEmpty {
-            self.connectionMessage = "填写设备 IP 后同步"
+            self.connectionMessage = loadedLanguage.text(.fillDevice)
         } else if loadedToken.isEmpty {
-            self.connectionMessage = "填写 Token 后同步"
+            self.connectionMessage = loadedLanguage.text(.fillToken)
         } else {
-            self.connectionMessage = "正在检查设备连接…"
+            self.connectionMessage = loadedLanguage.text(.checkingDevice)
         }
     }
 
     var syncButtonTitle: String {
-        if isCheckingConnection || isSyncingSettings { return "同步中" }
-        if syncSucceeded == true { return "已同步" }
-        if syncSucceeded == false { return "重试" }
-        return "同步"
+        if isCheckingConnection || isSyncingSettings { return language.text(.syncing) }
+        if syncSucceeded == true { return language.text(.synced) }
+        if syncSucceeded == false { return language.text(.retry) }
+        return language.text(.sync)
+    }
+
+    func setLanguage(_ newLanguage: ControllerLanguage) {
+        guard language != newLanguage else { return }
+        language = newLanguage
+        if deviceAddress.isEmpty {
+            connectionMessage = language.text(.fillDevice)
+        } else if token.isEmpty {
+            connectionMessage = language.text(.fillToken)
+        } else if isCheckingConnection || isSyncingSettings {
+            connectionMessage = language.text(.checkingDevice)
+        } else if online {
+            connectionMessage = language.text(.deviceOnline)
+        } else {
+            connectionMessage = language.text(.waiting)
+        }
+        actionMessage = online
+            ? language.text(.deviceOnlineCapacity, onboardBufferSize ?? bufferSize)
+            : language.text(.ready)
     }
 
     func saveToken(_ newValue: String) {
         token = newValue
         let changed = newValue != lastSavedToken
         if changed {
-            invalidateConnection(message: "Token 已修改，待检查")
+            invalidateConnection(message: language.text(.tokenModified))
         }
         do {
             try tokenStore.save(newValue)
             lastSavedToken = newValue
             if newValue.isEmpty {
-                invalidateConnection(message: "填写 Token 后同步")
+                invalidateConnection(message: language.text(.fillToken))
             }
         } catch {
-            invalidateConnection(message: "保存 Token 失败")
+            invalidateConnection(message: language.text(.tokenSaveFailed))
         }
     }
 
@@ -88,16 +114,16 @@ final class ControlPanelModel: ObservableObject {
         deviceAddress = newValue
         let changed = newValue != lastSavedDeviceAddress
         if changed {
-            invalidateConnection(message: "设备地址已修改，待检查")
+            invalidateConnection(message: language.text(.addressChanged))
         }
         do {
             try deviceAddressStore.save(newValue.trimmingCharacters(in: .whitespacesAndNewlines))
             lastSavedDeviceAddress = newValue
             if newValue.isEmpty {
-                invalidateConnection(message: "填写设备 IP 后同步")
+                invalidateConnection(message: language.text(.fillDevice))
             }
         } catch {
-            invalidateConnection(message: "保存设备 IP 失败")
+            invalidateConnection(message: language.text(.addressSaveFailed))
         }
     }
 
@@ -107,7 +133,7 @@ final class ControlPanelModel: ObservableObject {
         controlSettingsStore.saveBufferSize(bounded)
         syncSucceeded = nil
         if let onboardBufferSize, onboardBufferSize != bounded {
-            actionMessage = "BUFFER SIZE 待同步"
+            actionMessage = language.text(.bufferPending)
         }
     }
 
@@ -125,26 +151,26 @@ final class ControlPanelModel: ObservableObject {
         guard !isCheckingConnection, !isSyncingSettings else { return }
         guard let client = makeClient() else {
             online = false
-            connectionMessage = token.isEmpty ? "填写 Token 后同步" : "检查设备 IP 格式"
+            connectionMessage = token.isEmpty ? language.text(.fillToken) : language.text(.invalidAddress)
             return
         }
 
         isCheckingConnection = true
-        connectionMessage = "正在检查设备连接…"
+        connectionMessage = language.text(.checkingDevice)
         Task {
             defer { isCheckingConnection = false }
             do {
                 let status = try await client.status()
                 apply(status)
                 online = true
-                connectionMessage = "设备在线"
-                actionMessage = status.queueCapacity.map { "设备在线 · BUFFER SIZE \($0)" }
-                    ?? "设备在线 · 请更新 Onboard 服务"
+                connectionMessage = language.text(.deviceOnline)
+                actionMessage = status.queueCapacity.map { language.text(.deviceOnlineCapacity, $0) }
+                    ?? language.text(.serviceUpdate)
             } catch {
                 online = false
                 onboardBufferSize = nil
-                connectionMessage = error.localizedDescription
-                actionMessage = error.localizedDescription
+                connectionMessage = localizedMessage(for: error)
+                actionMessage = localizedMessage(for: error)
             }
         }
     }
@@ -154,14 +180,14 @@ final class ControlPanelModel: ObservableObject {
         guard let client = makeClient() else {
             online = false
             syncSucceeded = false
-            connectionMessage = token.isEmpty ? "填写 Token 后同步" : "检查设备 IP 格式"
+            connectionMessage = token.isEmpty ? language.text(.fillToken) : language.text(.invalidAddress)
             actionMessage = connectionMessage
             return
         }
 
         syncSucceeded = nil
         isSyncingSettings = true
-        actionMessage = "正在检查连接并同步 BUFFER SIZE…"
+        actionMessage = language.text(.settingsSyncing)
         Task {
             defer { isSyncingSettings = false }
             var connected = false
@@ -173,8 +199,8 @@ final class ControlPanelModel: ObservableObject {
 
                 guard let currentCapacity = status.queueCapacity else {
                     syncSucceeded = false
-                    connectionMessage = "在线，但 Onboard 服务需更新"
-                    actionMessage = "服务版本不支持 BUFFER SIZE 同步"
+                    connectionMessage = language.text(.onboardUpdateRequired)
+                    actionMessage = language.text(.serviceNoBufferSync)
                     return
                 }
 
@@ -186,27 +212,27 @@ final class ControlPanelModel: ObservableObject {
                     guard bufferSize == requestedCapacity,
                           receipt.queueCapacity == requestedCapacity else {
                         syncSucceeded = false
-                        actionMessage = "BUFFER SIZE 已变化，请再次同步"
+                        actionMessage = language.text(.bufferChanged)
                         return
                     }
                 }
 
                 syncSucceeded = true
-                connectionMessage = "设备在线"
+                connectionMessage = language.text(.deviceOnline)
                 actionMessage = currentCapacity == requestedCapacity
-                    ? "设备在线 · BUFFER SIZE 已同步"
-                    : "BUFFER SIZE 已上传并保存到设备"
+                    ? language.text(.bufferSynced)
+                    : language.text(.bufferUploaded)
             } catch {
                 syncSucceeded = false
                 if connected {
                     online = true
-                    connectionMessage = "设备在线"
+                    connectionMessage = language.text(.deviceOnline)
                 } else {
                     online = false
                     onboardBufferSize = nil
-                    connectionMessage = error.localizedDescription
+                    connectionMessage = localizedMessage(for: error)
                 }
-                actionMessage = error.localizedDescription
+                actionMessage = localizedMessage(for: error)
             }
         }
     }
@@ -217,11 +243,11 @@ final class ControlPanelModel: ObservableObject {
         isAutoRepeat: Bool = false
     ) {
         guard !token.isEmpty else {
-            actionMessage = "先填写 Auth Token"
+            actionMessage = language.text(.missingAuth)
             return
         }
         guard let client = makeClient() else {
-            actionMessage = "设备 IP 无效"
+            actionMessage = language.text(.invalidAddress)
             return
         }
 
@@ -232,29 +258,30 @@ final class ControlPanelModel: ObservableObject {
            minimumInterval > 0,
            let lastAcceptedKeyTime,
            now - lastAcceptedKeyTime < minimumInterval {
-            actionMessage = "方向键自动重复受 MIN INTERVAL 限制"
+            actionMessage = language.text(.repeatLimited)
             return
         }
         lastAcceptedKeyTime = now
 
+        let buttonTitle = button.title(in: language)
         actionMessage = holdMilliseconds.map {
-            "正在发送 \(button.title) 长按 \($0) ms…"
-        } ?? "正在发送 \(button.title)…"
+            language.text(.sendingHold, buttonTitle, $0)
+        } ?? language.text(.sendingTap, buttonTitle)
         Task {
             do {
                 let receipt = try await client.tap(button, holdMilliseconds: holdMilliseconds)
                 online = true
                 if receipt.duplicate == true {
-                    actionMessage = "\(button.title) 已去重"
+                    actionMessage = language.text(.duplicate, buttonTitle)
                 } else if let holdMilliseconds {
-                    actionMessage = "\(button.title) 长按 \(holdMilliseconds) ms 已发送 · 设备已接收"
+                    actionMessage = language.text(.holdSent, buttonTitle, holdMilliseconds)
                 } else {
-                    actionMessage = "\(button.title) 已发送 · 设备已接收"
+                    actionMessage = language.text(.tapSent, buttonTitle)
                 }
             } catch {
                 online = false
-                connectionMessage = error.localizedDescription
-                actionMessage = error.localizedDescription
+                connectionMessage = localizedMessage(for: error)
+                actionMessage = localizedMessage(for: error)
             }
         }
     }
@@ -269,13 +296,33 @@ final class ControlPanelModel: ObservableObject {
         queueLength = nil
         onboardBufferSize = nil
         syncSucceeded = nil
-        actionMessage = "准备就绪"
+        actionMessage = language.text(.ready)
         connectionMessage = message
     }
 
     private func makeClient() -> ActionCtrlHTTPClient? {
         guard let baseURL = Self.deviceURL(from: deviceAddress), !token.isEmpty else { return nil }
         return ActionCtrlHTTPClient(baseURL: baseURL, token: token, transport: transport)
+    }
+
+    private func localizedMessage(for error: Error) -> String {
+        guard let error = error as? ActionClientError else {
+            return language.text(.requestFailed)
+        }
+        return switch error {
+        case .invalidDeviceAddress: language.text(.invalidDeviceAddress)
+        case .invalidHoldDuration: language.text(.invalidHoldDuration)
+        case .invalidResponse: language.text(.invalidResponse)
+        case .rejected(let statusCode):
+            switch statusCode {
+            case 401: language.text(.tokenMismatch)
+            case 409: language.text(.serviceBusy)
+            case 429: language.text(.queueFull)
+            case 503: language.text(.serviceNotReady)
+            case 404: language.text(.unsupportedBuffer)
+            default: language.text(.deviceRejected, statusCode)
+            }
+        }
     }
 
     private static func clamp(_ value: Int, to range: ClosedRange<Int>) -> Int {

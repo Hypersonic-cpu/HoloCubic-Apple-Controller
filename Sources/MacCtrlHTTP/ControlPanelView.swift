@@ -1,14 +1,23 @@
 import AppKit
+#if SWIFT_PACKAGE
 import MacCtrlHTTPCore
+#endif
 import SwiftUI
 
 struct ControlPanelView: View {
     @StateObject private var model = ControlPanelModel()
-    @State private var revealsToken = false
+    @AppStorage(ControllerLanguage.preferenceKey, store: UserDefaults.standard)
+    private var languageCode = ControllerLanguage.chinese.rawValue
+    @AppStorage("settingsExpanded", store: UserDefaults.standard)
+    private var settingsExpanded = true
     @FocusState private var focusedInput: InputField?
 
+    private var language: ControllerLanguage {
+        ControllerLanguage(rawValue: languageCode) ?? .chinese
+    }
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             header
             Rectangle()
                 .fill(.white.opacity(0.13))
@@ -18,8 +27,11 @@ struct ControlPanelView: View {
             settingsPanel
             footer
         }
-        .padding(18)
-        .frame(width: 344, height: 530)
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 18)
+        .frame(width: 344)
+        .fixedSize(horizontal: false, vertical: true)
         .background {
             RoundedRectangle(cornerRadius: 27, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -43,11 +55,28 @@ struct ControlPanelView: View {
                 return true
             }
         ).frame(width: 1, height: 1))
-        .onChange(of: model.token) { newValue in model.saveToken(newValue) }
-        .onChange(of: model.deviceAddress) { newValue in model.saveDeviceAddress(newValue) }
+        .onChange(of: model.token) { newValue in
+            model.saveToken(newValue)
+        }
+        .onChange(of: model.deviceAddress) { newValue in
+            model.saveDeviceAddress(newValue)
+        }
         .onChange(of: model.bufferSize) { newValue in model.saveBufferSize(newValue) }
         .onChange(of: model.keyDelayMilliseconds) { newValue in model.saveKeyDelay(newValue) }
-        .onAppear { model.checkConnection() }
+        .onChange(of: languageCode) { newValue in
+            UserDefaults.standard.set(newValue, forKey: ControllerLanguage.preferenceKey)
+            UserDefaults.standard.synchronize()
+            model.setLanguage(ControllerLanguage(rawValue: newValue) ?? .chinese)
+        }
+        .onChange(of: settingsExpanded) { newValue in
+            UserDefaults.standard.set(newValue, forKey: "settingsExpanded")
+            UserDefaults.standard.synchronize()
+        }
+        .onAppear {
+            model.setLanguage(language)
+            model.checkConnection()
+        }
+        .animation(.easeInOut(duration: 0.2), value: settingsExpanded)
         .preferredColorScheme(.dark)
     }
 
@@ -66,7 +95,7 @@ struct ControlPanelView: View {
                 Text("HoloCubic")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primary)
-                Text("局域网手柄控制")
+                Text(language.text(.appSubtitle))
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -81,7 +110,7 @@ struct ControlPanelView: View {
             Circle()
                 .fill(model.online ? Color.green : (model.isCheckingConnection ? Color.cyan : Color.orange))
                 .frame(width: 6, height: 6)
-            Text(model.online ? "在线" : (model.isCheckingConnection ? "连接中" : "待连接"))
+            Text(model.online ? language.text(.online) : (model.isCheckingConnection ? language.text(.connecting) : language.text(.waiting)))
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -94,7 +123,7 @@ struct ControlPanelView: View {
 
     private var controlSurface: some View {
         HStack(spacing: 24) {
-            DirectionPad { send($0) }
+            DirectionPad(language: language) { send($0) }
             Spacer(minLength: 0)
             VStack(spacing: 10) {
                 ActionKey(button: .a, tint: .cyan) { send(.a) }
@@ -117,30 +146,50 @@ struct ControlPanelView: View {
     }
 
     private var settingsPanel: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Text("设置")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
+        VStack(spacing: 9) {
+            Button {
+                leaveInputMode()
+                settingsExpanded.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Text(language.text(.settings))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: settingsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text(.settings))
+            .accessibilityValue(settingsExpanded ? language.text(.expanded) : language.text(.collapsed))
 
-            tokenEntry
-            addressEntry
-            settingControls
+            if settingsExpanded {
+                VStack(alignment: .leading, spacing: 9) {
+                    tokenEntry
+                    addressEntry
+                    settingControls
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
     }
 
     private var tokenEntry: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("AUTH TOKEN", systemImage: "key.fill")
+            Label(language.text(.tokenLabel), systemImage: "key.fill")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .tracking(0.8)
                 .foregroundStyle(.secondary)
             HStack(spacing: 8) {
                 Group {
-                    if revealsToken {
-                        TextField("输入 ActionCtrlHTTP Token", text: $model.token)
+                    if model.revealsToken {
+                        TextField(language.text(.tokenPlaceholder), text: $model.token)
                             .focused($focusedInput, equals: .token)
                     } else {
-                        SecureField("输入 ActionCtrlHTTP Token", text: $model.token)
+                        SecureField(language.text(.tokenPlaceholder), text: $model.token)
                             .focused($focusedInput, equals: .token)
                     }
                 }
@@ -155,17 +204,17 @@ struct ControlPanelView: View {
 
                 Button {
                     leaveInputMode()
-                    revealsToken.toggle()
+                    model.revealsToken.toggle()
                 } label: {
-                    Image(systemName: revealsToken ? "eye.slash" : "eye")
+                    Image(systemName: model.revealsToken ? "eye.slash" : "eye")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                         .frame(width: 24, height: 22)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(revealsToken ? "隐藏 Token" : "显示 Token")
-                .accessibilityLabel(revealsToken ? "隐藏 Token" : "显示 Token")
+                .help(model.revealsToken ? language.text(.hideToken) : language.text(.showToken))
+                .accessibilityLabel(model.revealsToken ? language.text(.hideToken) : language.text(.showToken))
             }
             .padding(.horizontal, 11)
             .frame(height: 38)
@@ -179,11 +228,11 @@ struct ControlPanelView: View {
 
     private var addressEntry: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("DEVICE IP", systemImage: "network")
+            Label(language.text(.deviceIPLabel), systemImage: "network")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .tracking(0.8)
                 .foregroundStyle(.secondary)
-            TextField("输入设备 IP 或主机名", text: $model.deviceAddress)
+            TextField(language.text(.addressPlaceholder), text: $model.deviceAddress)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11, design: .monospaced))
                 .autocorrectionDisabled()
@@ -205,7 +254,7 @@ struct ControlPanelView: View {
     private var settingControls: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 6) {
-                settingLabel("BUFFER SIZE")
+                settingLabel(language.text(.bufferSize))
                 HStack(spacing: 4) {
                     TextField("16", value: $model.bufferSize, format: .number)
                         .textFieldStyle(.plain)
@@ -231,7 +280,7 @@ struct ControlPanelView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 6) {
-                settingLabel("MIN INTERVAL")
+                settingLabel(language.text(.minInterval))
                 HStack(spacing: 4) {
                     TextField("500", value: $model.keyDelayMilliseconds, format: .number)
                         .textFieldStyle(.plain)
@@ -257,7 +306,7 @@ struct ControlPanelView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 6) {
-                settingLabel("DEVICE")
+                settingLabel(language.text(.device))
                 Button {
                     leaveInputMode()
                     model.syncDeviceSettings()
@@ -277,7 +326,7 @@ struct ControlPanelView: View {
                             Image(systemName: "arrow.up.to.line")
                                 .font(.system(size: 10, weight: .bold))
                         }
-                        Text(model.syncButtonTitle)
+                            Text(model.syncButtonTitle)
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -290,8 +339,8 @@ struct ControlPanelView: View {
                 }
                 .buttonStyle(SoftPressStyle())
                 .disabled(model.isCheckingConnection || model.isSyncingSettings)
-                .help("检查设备连接，并同步 BUFFER SIZE")
-                .accessibilityLabel("检查连接并同步 BUFFER SIZE")
+                .help(language.text(.syncHelp))
+                .accessibilityLabel(language.text(.checkAndSync))
             }
             .frame(maxWidth: .infinity)
         }
@@ -324,7 +373,7 @@ struct ControlPanelView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(delta > 0 ? "增加 BUFFER SIZE" : "减少 BUFFER SIZE")
+        .help(delta > 0 ? language.text(.increaseBuffer) : language.text(.decreaseBuffer))
     }
 
     private var footer: some View {
@@ -338,7 +387,7 @@ struct ControlPanelView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
-            Text("← ↑ ↓ →  ·  A / B · Home")
+            Text(language.text(.keyboardLegend))
                 .font(.system(size: 9, weight: .medium, design: .rounded))
                 .foregroundStyle(.tertiary)
                 .fixedSize()
@@ -373,6 +422,7 @@ private enum InputField: Hashable {
 }
 
 private struct DirectionPad: View {
+    let language: ControllerLanguage
     let action: (RemoteButton) -> Void
 
     var body: some View {
@@ -391,7 +441,7 @@ private struct DirectionPad: View {
         }
         .frame(width: 148, height: 148)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("方向键")
+        .accessibilityLabel(language.text(.directionPad))
     }
 }
 
@@ -412,8 +462,8 @@ private struct DirectionKey: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel(button.title)
-        .help(button.title)
+        .accessibilityLabel(button.title(in: ControllerLanguage.preferred))
+        .help(button.title(in: ControllerLanguage.preferred))
     }
 }
 
@@ -488,8 +538,8 @@ private struct HomeKey: View {
                 .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("Home")
-        .help("Home：返回 Launcher")
+        .accessibilityLabel(ControllerLanguage.preferred.text(.home))
+        .help(ControllerLanguage.preferred.text(.homeHelp))
     }
 }
 

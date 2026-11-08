@@ -13,6 +13,8 @@ Requires macOS 13 or later and Xcode Command Line Tools.
 
 The device IP is entered in the app and automatically saved in its macOS preferences. The app does not depend on an environment variable.
 
+The app includes a `Language` menu in the macOS menu bar with Simplified Chinese, English, and French. The Settings section can be collapsed to shrink the window; its expanded state is saved.
+
 ## Use
 
 - Click the four rounded triangle buttons or press the arrow keys.

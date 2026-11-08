@@ -22,4 +22,16 @@ public enum RemoteButton: String, CaseIterable, Codable, Sendable, Identifiable 
         case .home: "Home"
         }
     }
+
+    public func title(in language: ControllerLanguage) -> String {
+        switch self {
+        case .up: language.text(.up)
+        case .down: language.text(.down)
+        case .left: language.text(.left)
+        case .right: language.text(.right)
+        case .a: "A"
+        case .b: "B"
+        case .home: language.text(.home)
+        }
+    }
 }
