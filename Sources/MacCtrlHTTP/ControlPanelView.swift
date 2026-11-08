@@ -8,19 +8,18 @@ struct ControlPanelView: View {
     @FocusState private var focusedInput: InputField?
 
     var body: some View {
-        VStack(spacing: 15) {
+        VStack(spacing: 12) {
             header
             Rectangle()
                 .fill(.white.opacity(0.13))
                 .frame(height: 1)
                 .padding(.horizontal, 2)
             controlSurface
-            tokenEntry
-            addressEntry
+            settingsPanel
             footer
         }
-        .padding(19)
-        .frame(width: 344, height: 486)
+        .padding(18)
+        .frame(width: 344, height: 530)
         .background {
             RoundedRectangle(cornerRadius: 27, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -34,10 +33,18 @@ struct ControlPanelView: View {
         }
         .background(KeyboardShortcutCapture(
             action: { send($0) },
-            onEscape: { leaveInputMode() }
+            onEscape: { leaveInputMode() },
+            onBufferStep: { delta in
+                guard focusedInput == .buffer else { return false }
+                model.adjustBufferSize(by: delta)
+                return true
+            }
         ).frame(width: 1, height: 1))
         .onChange(of: model.token) { newValue in model.saveToken(newValue) }
         .onChange(of: model.deviceAddress) { newValue in model.saveDeviceAddress(newValue) }
+        .onChange(of: model.bufferSize) { newValue in model.saveBufferSize(newValue) }
+        .onChange(of: model.keyDelayMilliseconds) { newValue in model.saveKeyDelay(newValue) }
+        .onAppear { model.checkConnection() }
         .preferredColorScheme(.dark)
     }
 
@@ -69,9 +76,9 @@ struct ControlPanelView: View {
     private var connectionBadge: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(model.online ? Color.green : Color.orange)
+                .fill(model.online ? Color.green : (model.isCheckingConnection ? Color.cyan : Color.orange))
                 .frame(width: 6, height: 6)
-            Text(model.online ? "在线" : "待连接")
+            Text(model.online ? "在线" : (model.isCheckingConnection ? "连接中" : "待连接"))
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -106,18 +113,24 @@ struct ControlPanelView: View {
         }
     }
 
+    private var settingsPanel: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("设置")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            tokenEntry
+            addressEntry
+            settingControls
+        }
+    }
+
     private var tokenEntry: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Label("AUTH TOKEN", systemImage: "key.fill")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("自动保存")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(.tertiary)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            Label("AUTH TOKEN", systemImage: "key.fill")
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
             HStack(spacing: 8) {
                 Group {
                     if revealsToken {
@@ -134,7 +147,7 @@ struct ControlPanelView: View {
                 .autocorrectionDisabled()
                 .onSubmit {
                     leaveInputMode()
-                    model.confirmToken()
+                    model.syncDeviceSettings()
                 }
 
                 Button {
@@ -150,13 +163,6 @@ struct ControlPanelView: View {
                 .buttonStyle(.plain)
                 .help(revealsToken ? "隐藏 Token" : "显示 Token")
                 .accessibilityLabel(revealsToken ? "隐藏 Token" : "显示 Token")
-
-                ConfirmationButton(
-                    isLoading: model.isConfirmingToken
-                ) {
-                    leaveInputMode()
-                    model.confirmToken()
-                }
             }
             .padding(.horizontal, 11)
             .frame(height: 38)
@@ -165,53 +171,157 @@ struct ControlPanelView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(.white.opacity(0.13), lineWidth: 1)
             }
-            Text("Token 自动保存 · 上箭头发送 B")
-                .font(.system(size: 9, weight: .regular, design: .rounded))
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
         }
     }
 
     private var addressEntry: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Label("DEVICE IP", systemImage: "network")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("自动保存")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(.tertiary)
-            }
-            HStack(spacing: 8) {
-                TextField("输入设备 IP 或主机名", text: $model.deviceAddress)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 11, design: .monospaced))
-                    .autocorrectionDisabled()
-                    .focused($focusedInput, equals: .address)
-                    .onSubmit {
-                        leaveInputMode()
-                        model.testConnection()
-                    }
-
-                ConnectionTestButton(isLoading: model.isTestingConnection) {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("DEVICE IP", systemImage: "network")
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
+            TextField("输入设备 IP 或主机名", text: $model.deviceAddress)
+                .textFieldStyle(.plain)
+                .font(.system(size: 11, design: .monospaced))
+                .autocorrectionDisabled()
+                .focused($focusedInput, equals: .address)
+                .onSubmit {
                     leaveInputMode()
-                    model.testConnection()
+                    model.syncDeviceSettings()
+                }
+                .padding(.horizontal, 11)
+                .frame(height: 38)
+                .background(.black.opacity(0.17), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(.white.opacity(0.13), lineWidth: 1)
+                }
+        }
+    }
+
+    private var settingControls: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
+                settingLabel("BUFFER SIZE")
+                HStack(spacing: 4) {
+                    TextField("16", value: $model.bufferSize, format: .number)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .focused($focusedInput, equals: .buffer)
+                        .onSubmit {
+                            leaveInputMode()
+                            model.saveBufferSize(model.bufferSize)
+                        }
+                    VStack(spacing: 1) {
+                        bufferStepButton("chevron.up", delta: 1)
+                        bufferStepButton("chevron.down", delta: -1)
+                    }
+                }
+                .padding(.horizontal, 7)
+                .frame(height: 38)
+                .background(.black.opacity(0.17), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(.white.opacity(0.13), lineWidth: 1)
                 }
             }
-            .padding(.horizontal, 11)
-            .frame(height: 38)
-            .background(.black.opacity(0.17), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(.white.opacity(0.13), lineWidth: 1)
+            .frame(maxWidth: .infinity)
+
+            VStack(alignment: .leading, spacing: 6) {
+                settingLabel("KEY DELAY")
+                HStack(spacing: 4) {
+                    TextField("500", value: $model.keyDelayMilliseconds, format: .number)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .multilineTextAlignment(.leading)
+                        .focused($focusedInput, equals: .keyDelay)
+                        .onSubmit {
+                            leaveInputMode()
+                            model.saveKeyDelay(model.keyDelayMilliseconds)
+                        }
+                    Text("ms")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 38)
+                .background(.black.opacity(0.17), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(.white.opacity(0.13), lineWidth: 1)
+                }
             }
-            Text("联通测试只读取 ActionCtrlHTTP 服务状态")
-                .font(.system(size: 9, weight: .regular, design: .rounded))
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
+            .frame(maxWidth: .infinity)
+
+            VStack(alignment: .leading, spacing: 6) {
+                settingLabel("DEVICE")
+                Button {
+                    leaveInputMode()
+                    model.syncDeviceSettings()
+                } label: {
+                    HStack(spacing: 5) {
+                        if model.isCheckingConnection || model.isSyncingSettings {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .tint(.white)
+                        } else if model.syncSucceeded == true {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                        } else if model.syncSucceeded == false {
+                            Image(systemName: "exclamationmark")
+                                .font(.system(size: 10, weight: .bold))
+                        } else {
+                            Image(systemName: "arrow.up.to.line")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        Text(model.syncButtonTitle)
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .foregroundStyle(.white.opacity(0.96))
+                    .background(syncButtonColor.opacity(0.76), in: Capsule())
+                    .overlay(Capsule().strokeBorder(syncButtonColor.opacity(0.82), lineWidth: 1))
+                }
+                .buttonStyle(SoftPressStyle())
+                .disabled(model.isCheckingConnection || model.isSyncingSettings)
+                .help("检查设备连接，并同步 BUFFER SIZE")
+                .accessibilityLabel("检查连接并同步 BUFFER SIZE")
+            }
+            .frame(maxWidth: .infinity)
         }
+    }
+
+    private var syncButtonColor: Color {
+        if model.syncSucceeded == true { return .green }
+        if model.syncSucceeded == false { return .red }
+        return .cyan
+    }
+
+    private func settingLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 8, weight: .bold, design: .rounded))
+            .tracking(0.55)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+    }
+
+    private func bufferStepButton(_ symbol: String, delta: Int) -> some View {
+        Button {
+            model.adjustBufferSize(by: delta)
+            focusedInput = .buffer
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 18, height: 15)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(delta > 0 ? "增加 BUFFER SIZE" : "减少 BUFFER SIZE")
     }
 
     private var footer: some View {
@@ -251,68 +361,8 @@ struct ControlPanelView: View {
 private enum InputField: Hashable {
     case token
     case address
-}
-
-private struct ConfirmationButton: View {
-    let isLoading: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.1))
-                    .overlay {
-                        Circle().strokeBorder(Color.white.opacity(0.24), lineWidth: 1)
-                    }
-                if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.white)
-                } else {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.primary.opacity(0.82))
-                }
-            }
-            .frame(width: 34, height: 34)
-            .contentShape(Circle())
-        }
-        .buttonStyle(SoftPressStyle())
-        .disabled(isLoading)
-        .help("确认 Token 并发送 B")
-        .accessibilityLabel(isLoading ? "正在验证 Token" : "确认 Token 并发送 B")
-    }
-}
-
-private struct ConnectionTestButton: View {
-    let isLoading: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.1))
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.24), lineWidth: 1))
-                if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.white)
-                } else {
-                    Image(systemName: "dot.radiowaves.left.and.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.primary.opacity(0.82))
-                }
-            }
-            .frame(width: 34, height: 34)
-            .contentShape(Circle())
-        }
-        .buttonStyle(SoftPressStyle())
-        .disabled(isLoading)
-        .help("测试设备联通")
-        .accessibilityLabel(isLoading ? "正在测试联通" : "测试设备联通")
-    }
+    case buffer
+    case keyDelay
 }
 
 private struct DirectionPad: View {
@@ -448,8 +498,11 @@ private struct SoftPressStyle: ButtonStyle {
 private struct KeyboardShortcutCapture: NSViewRepresentable {
     let action: (RemoteButton) -> Void
     let onEscape: () -> Void
+    let onBufferStep: (Int) -> Bool
 
-    func makeCoordinator() -> Coordinator { Coordinator(action: action, onEscape: onEscape) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action, onEscape: onEscape, onBufferStep: onBufferStep)
+    }
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
@@ -461,6 +514,7 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.action = action
         context.coordinator.onEscape = onEscape
+        context.coordinator.onBufferStep = onBufferStep
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
@@ -471,12 +525,18 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
         weak var view: NSView?
         var action: (RemoteButton) -> Void
         var onEscape: () -> Void
+        var onBufferStep: (Int) -> Bool
         private var monitor: Any?
         private var mouseMonitor: Any?
 
-        init(action: @escaping (RemoteButton) -> Void, onEscape: @escaping () -> Void) {
+        init(
+            action: @escaping (RemoteButton) -> Void,
+            onEscape: @escaping () -> Void,
+            onBufferStep: @escaping (Int) -> Bool
+        ) {
             self.action = action
             self.onEscape = onEscape
+            self.onBufferStep = onBufferStep
         }
 
         func installMonitor() {
@@ -493,6 +553,10 @@ private struct KeyboardShortcutCapture: NSViewRepresentable {
                     guard !event.isARepeat else { return nil }
                     self.action(.home)
                     return nil
+                }
+                if Self.isEditingText(in: window), [126, 125].contains(event.keyCode) {
+                    let step = event.keyCode == 126 ? 1 : -1
+                    if self.onBufferStep(step) { return nil }
                 }
                 guard !Self.isEditingText(in: window),
                       !event.isARepeat,

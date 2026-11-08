@@ -21,12 +21,14 @@ public struct ActionStatus: Decodable, Sendable {
     public let source: String?
     public let buttons: Int?
     public let queueLength: Int?
+    public let queueCapacity: Int?
 
     enum CodingKeys: String, CodingKey {
         case ok
         case source
         case buttons
         case queueLength = "queue_length"
+        case queueCapacity = "queue_capacity"
     }
 }
 
@@ -41,6 +43,20 @@ public struct TapReceipt: Decodable, Sendable {
         case requestID = "request_id"
         case queued
         case duplicate
+    }
+}
+
+public struct QueueCapacityReceipt: Decodable, Sendable {
+    public let ok: Bool
+    public let queueCapacity: Int?
+    public let queueLength: Int?
+    public let persisted: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case ok
+        case queueCapacity = "queue_capacity"
+        case queueLength = "queue_length"
+        case persisted
     }
 }
 
@@ -61,6 +77,7 @@ public enum ActionClientError: Error, LocalizedError, Sendable, Equatable {
             case 409: "ble-main 正被其他服务占用"
             case 429: "设备按键队列已满，请稍后再试"
             case 503: "ActionCtrlHTTP 尚未配置或未就绪"
+            case 404: "Onboard ActionCtrlHTTP 尚不支持 BUFFER SIZE 同步，请更新服务"
             default: "设备拒绝请求（HTTP \(statusCode)）"
             }
         }
@@ -91,6 +108,29 @@ public struct ActionCtrlHTTPClient {
             throw ActionClientError.rejected(statusCode: response.statusCode)
         }
         guard let decoded = try? JSONDecoder().decode(ActionStatus.self, from: data), decoded.ok else {
+            throw ActionClientError.invalidResponse
+        }
+        return decoded
+    }
+
+    public func setQueueCapacity(_ capacity: Int) async throws -> QueueCapacityReceipt {
+        var request = URLRequest(url: endpoint("settings"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(QueueCapacityRequest(queueCapacity: capacity))
+        addAuthentication(to: &request)
+
+        let (data, response) = try await transport.data(for: request)
+        guard let response = response as? HTTPURLResponse else {
+            throw ActionClientError.invalidResponse
+        }
+        guard response.statusCode == 200 else {
+            throw ActionClientError.rejected(statusCode: response.statusCode)
+        }
+        guard let decoded = try? JSONDecoder().decode(QueueCapacityReceipt.self, from: data),
+              decoded.ok,
+              decoded.persisted == true,
+              decoded.queueCapacity == capacity else {
             throw ActionClientError.invalidResponse
         }
         return decoded
@@ -140,5 +180,13 @@ private struct TapRequest: Encodable {
     enum CodingKeys: String, CodingKey {
         case button
         case requestID = "request_id"
+    }
+}
+
+private struct QueueCapacityRequest: Encodable {
+    let queueCapacity: Int
+
+    enum CodingKeys: String, CodingKey {
+        case queueCapacity = "queue_capacity"
     }
 }

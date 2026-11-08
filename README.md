@@ -16,10 +16,10 @@ The device IP is entered in the app and automatically saved in its macOS prefere
 ## Use
 
 - Click the four rounded triangle buttons or press the arrow keys.
-- Click A/B or press the physical A/B keys.
-- Enter the `ActionCtrlHTTP` token and device IP. Both save automatically in the app's macOS preferences and restore on the next launch. The eye button toggles token visibility.
-- The circular radio-wave button beside the IP field tests connectivity with `GET /remote/api/v1/status`; it does not press a controller button. The top indicator turns green when the authenticated status request succeeds.
-- The circular up-arrow beside the token sends one B tap to confirm that the token works. Editing either field resets the connection state. Pressing Return in either field performs that row's action.
+- Enter sends A, Escape sends Home, and Space sends B. A/B letter keys remain available as aliases.
+- Enter the `ActionCtrlHTTP` token and device IP. Both are saved in the app's macOS preferences and restored on the next launch. The eye button toggles token visibility.
+- The app checks `GET /remote/api/v1/status` on launch. The settings-row pill checks connectivity and uploads `BUFFER SIZE` through `POST /remote/api/v1/settings` only when it differs from the onboard value.
+- `BUFFER SIZE` is saved locally and on the device (1–32, default 16). `KEY DELAY` is saved locally (0–999 ms, default 500 ms); new key presses inside the interval are ignored instead of queued.
 - Controller buttons use `POST /remote/api/v1/tap` with `X-ActionCtrl-Token`.
 
 The app sends one tap per key-down and ignores keyboard auto-repeat. HTTP is plain text on the local network, matching the device service.
