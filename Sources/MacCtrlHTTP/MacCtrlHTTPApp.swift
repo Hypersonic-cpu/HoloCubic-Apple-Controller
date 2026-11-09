@@ -19,14 +19,6 @@ struct MacCtrlHTTPApp: App {
             ControlPanelView()
                 .frame(width: 344)
                 .background(WindowChrome().frame(width: 1, height: 1))
-                .background {
-                    GeometryReader { geometry in
-                        Color.clear.preference(key: WindowContentSizePreference.self, value: geometry.size)
-                    }
-                }
-                .onPreferenceChange(WindowContentSizePreference.self) { size in
-                    WindowSizeController.shared.request(size)
-                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.automatic)
@@ -60,17 +52,6 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { WindowSizeController.shared.reopen() }
         return true
-    }
-}
-
-private struct WindowContentSizePreference: PreferenceKey {
-    static var defaultValue = CGSize(width: 344, height: 560)
-
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        let next = nextValue()
-        if next.width > 1, next.height > 1 {
-            value = next
-        }
     }
 }
 
@@ -110,15 +91,30 @@ private final class WindowChromeView: NSView {
     }
 }
 
-private final class WindowSizeController: NSObject {
+final class WindowSizeController: NSObject {
     static let shared = WindowSizeController()
 
     private var window: NSWindow?
-    private var requestedSize: CGSize?
 
     func bind(_ window: NSWindow) {
         self.window = window
-        applyRequestedSize()
+    }
+
+    func resizeToContentMinimum() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self,
+                  let window = self.window,
+                  !window.styleMask.contains(.fullScreen) else { return }
+            let targetSize = window.contentMinSize
+            guard targetSize.width > 1, targetSize.height > 1 else { return }
+            let currentSize = window.contentView?.bounds.size ?? .zero
+            guard abs(currentSize.width - targetSize.width) > 0.5
+                    || abs(currentSize.height - targetSize.height) > 0.5 else { return }
+            let topEdge = window.frame.maxY
+            window.setContentSize(targetSize)
+            let resizedFrame = window.frame
+            window.setFrameOrigin(NSPoint(x: resizedFrame.minX, y: topEdge - resizedFrame.height))
+        }
     }
 
     @objc func closeWindow(_ sender: Any?) {
@@ -131,27 +127,4 @@ private final class WindowSizeController: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    func request(_ size: CGSize) {
-        guard size.width.isFinite, size.height.isFinite, size.width > 1, size.height > 1 else { return }
-        DispatchQueue.main.async { [weak self] in
-            self?.requestedSize = CGSize(width: ceil(size.width), height: ceil(size.height))
-            self?.applyRequestedSize()
-        }
-    }
-
-    private func applyRequestedSize() {
-        guard let window,
-              !window.styleMask.contains(.fullScreen),
-              let requestedSize,
-              let currentSize = window.contentView?.bounds.size,
-              abs(currentSize.width - requestedSize.width) > 1
-                || abs(currentSize.height - requestedSize.height) > 1 else {
-            return
-        }
-
-        let topEdge = window.frame.maxY
-        window.setContentSize(requestedSize)
-        let resizedFrame = window.frame
-        window.setFrameOrigin(NSPoint(x: resizedFrame.minX, y: topEdge - resizedFrame.height))
-    }
 }

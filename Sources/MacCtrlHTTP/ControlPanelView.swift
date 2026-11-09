@@ -77,10 +77,12 @@ struct ControlPanelView: View {
         }
         .onChange(of: settingsExpanded) { _, newValue in
             AppSharedPreferences.save(newValue, forKey: "settingsExpanded")
+            WindowSizeController.shared.resizeToContentMinimum()
         }
         .onAppear {
             model.setLanguage(language)
             model.checkConnection()
+            WindowSizeController.shared.resizeToContentMinimum()
             WidgetCenter.shared.reloadAllTimelines()
         }
         .animation(.easeInOut(duration: 0.2), value: settingsExpanded)
