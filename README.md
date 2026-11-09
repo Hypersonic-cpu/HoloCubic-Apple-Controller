@@ -4,11 +4,17 @@ A small translucent macOS controller for the HoloCubic `ActionCtrlHTTP` service.
 
 ## Build and launch
 
-Requires macOS 14 or later and Xcode Command Line Tools. The widget uses interactive App Intents and needs a WidgetKit extension.
+Requires macOS 14 or later and the full Xcode installation selected with `xcode-select`. The widget uses interactive App Intents and needs a WidgetKit extension.
 
 ```sh
-./scripts/build-app.sh
-./scripts/run-app.sh
+xcodebuild -project MacCtrlHTTP.xcodeproj -scheme MacCtrlHTTP \
+  -configuration Release -destination 'platform=macOS' \
+  -derivedDataPath build/Xcode/DerivedData CODE_SIGNING_ALLOWED=NO build
+ditto build/Xcode/DerivedData/Build/Products/Release/MacCtrlHTTP.app build/MacCtrlHTTP.app
+codesign --force --sign - --entitlements WidgetExtension/WidgetExtension.entitlements build/MacCtrlHTTP.app/Contents/PlugIns/WidgetExtension.appex
+codesign --force --sign - --entitlements MacCtrlHTTP.entitlements build/MacCtrlHTTP.app
+codesign --verify --deep --strict build/MacCtrlHTTP.app
+open build/MacCtrlHTTP.app
 ```
 
 The device IP is entered in the app and automatically saved in its macOS preferences. The app does not depend on an environment variable.

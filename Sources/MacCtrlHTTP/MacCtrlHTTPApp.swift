@@ -29,7 +29,7 @@ struct MacCtrlHTTPApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .windowResizability(.automatic)
         .defaultSize(width: 344, height: 560)
         .commands {
             CommandGroup(replacing: .newItem) {}
@@ -54,7 +54,12 @@ struct MacCtrlHTTPApp: App {
 
 private final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { WindowSizeController.shared.reopen() }
+        return true
     }
 }
 
@@ -88,20 +93,42 @@ private final class WindowChromeView: NSView {
             window.backgroundColor = .clear
             window.isMovableByWindowBackground = true
             window.hasShadow = true
+            window.isReleasedWhenClosed = false
+            window.styleMask.formUnion([.closable, .miniaturizable, .resizable])
+            window.collectionBehavior.insert(.fullScreenPrimary)
+            if let close = window.standardWindowButton(.closeButton) {
+                close.target = WindowSizeController.shared
+                close.action = #selector(WindowSizeController.closeWindow(_:))
+            }
+            if let zoom = window.standardWindowButton(.zoomButton) {
+                zoom.isEnabled = true
+                zoom.target = window
+                zoom.action = #selector(NSWindow.toggleFullScreen(_:))
+            }
             WindowSizeController.shared.bind(window)
         }
     }
 }
 
-private final class WindowSizeController {
+private final class WindowSizeController: NSObject {
     static let shared = WindowSizeController()
 
-    private weak var window: NSWindow?
+    private var window: NSWindow?
     private var requestedSize: CGSize?
 
     func bind(_ window: NSWindow) {
         self.window = window
         applyRequestedSize()
+    }
+
+    @objc func closeWindow(_ sender: Any?) {
+        window?.orderOut(sender)
+    }
+
+    func reopen() {
+        guard let window else { return }
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
     }
 
     func request(_ size: CGSize) {
@@ -114,6 +141,7 @@ private final class WindowSizeController {
 
     private func applyRequestedSize() {
         guard let window,
+              !window.styleMask.contains(.fullScreen),
               let requestedSize,
               let currentSize = window.contentView?.bounds.size,
               abs(currentSize.width - requestedSize.width) > 1
