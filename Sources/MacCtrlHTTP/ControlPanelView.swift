@@ -357,16 +357,33 @@ struct ControlPanelView: View {
     private var transportSettings: some View {
         VStack(alignment: .leading, spacing: 8) {
             settingLabel(language.text(.controlTransport))
-            Picker(language.text(.controlTransport), selection: Binding(
-                get: { model.transportMode },
-                set: { model.setTransportMode($0) }
-            )) {
+            HStack(spacing: 2) {
                 ForEach(ControlTransportMode.allCases) { mode in
-                    Text(mode.title(in: language)).tag(mode)
+                    Button {
+                        leaveInputMode()
+                        model.setTransportMode(mode)
+                    } label: {
+                        Text(mode.title(in: language))
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .frame(height: 26)
+                            .background {
+                                if model.transportMode == mode {
+                                    RoundedRectangle(cornerRadius: 7)
+                                        .fill(Color.cyan.opacity(0.3))
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(model.transportMode == mode ? .isSelected : [])
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .padding(3)
+            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(language.text(.controlTransport))
 
             HStack(spacing: 6) {
                 statusIndicator(
@@ -468,11 +485,7 @@ struct ControlPanelView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-            Spacer(minLength: 4)
-            Text(language.text(.keyboardLegend))
-                .font(.system(size: 9, weight: .medium, design: .rounded))
-                .foregroundStyle(.tertiary)
-                .fixedSize()
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         }
         .padding(.bottom, 1)
         .help(model.connectionMessage)
@@ -544,6 +557,7 @@ private struct DirectionKey: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle())
+        .focusable(false)
         .accessibilityLabel(button.title(in: ControllerLanguage.preferred))
         .help(button.title(in: ControllerLanguage.preferred))
     }
