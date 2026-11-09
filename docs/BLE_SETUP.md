@@ -19,4 +19,15 @@ traffic or protect against radio eavesdropping. Do not reuse the HTTP token.
 configuration path and the current advertising, HTTP, and BLE states. macOS may ask for
 Bluetooth access on first use; allow it for peripheral advertising.
 
+The advertisement includes the 128-bit service UUID without a local name. The HoloCubic scans
+for that UUID, and keeping the payload small avoids placing the UUID only in a scan response.
+
+MacCtrlHTTP shows **Authorized** only after the HoloCubic confirms receipt of `auth_ok` with an
+`auth_confirm` write on the same session. If the state falls back to Advertising, the central
+disconnected; the HoloCubic Service logs its active connection handle and retry state.
+
 The WidgetKit extension remains HTTP-only and does not use the BLE transport.
+
+### Reconnection mitigation (device bridge 0.1.3)
+
+The bridge attempts the last authenticated peer directly about 100 ms after a ready session disconnects, retries up to five direct attempts in total with about 100 ms between a failure and the next attempt, then falls back to active scanning if the attempts fail or the cached peer expires. It re-discovers GATT and re-authenticates on every connection. MTU 247 reduces authentication fragmentation where supported. Measured disconnect-to-authenticated recovery was 2.03–2.33 seconds in the latest samples; this does not fix the periodic disconnect or provide seamless control. No commands are buffered across reconnection. The GUI now refreshes its main status after the new BLE state is stored, avoiding a stale Authorizing label.

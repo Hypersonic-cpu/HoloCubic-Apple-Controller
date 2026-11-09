@@ -66,7 +66,10 @@ struct ControlPanelView: View {
         }
         .onChange(of: model.bufferSize) { _, newValue in model.saveBufferSize(newValue) }
         .onChange(of: model.keyDelayMilliseconds) { _, newValue in model.saveKeyDelay(newValue) }
-        .onReceive(model.bleManager.$state) { _ in model.refreshTransportStatus() }
+        // @Published emits in willSet; refresh after the manager stores its new state.
+        .onReceive(model.bleManager.$state.receive(on: DispatchQueue.main)) { _ in
+            model.refreshTransportStatus()
+        }
         .onChange(of: languageCode) { _, newValue in
             AppSharedPreferences.save(newValue, forKey: ControllerLanguage.preferenceKey)
             model.setLanguage(ControllerLanguage(rawValue: newValue) ?? .chinese)

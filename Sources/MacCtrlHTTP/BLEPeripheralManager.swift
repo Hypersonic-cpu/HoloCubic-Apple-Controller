@@ -77,6 +77,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
     private var serviceAdded = false
     private var serviceAddPending = false
     private var subscribedCentral: CBCentral?
+    private var pendingAuthorizedCentralID: UUID?
     private var authorizedCentralID: UUID?
     private var authRequestID: String?
     private var assembler = BLEFrameAssembler()
@@ -143,7 +144,9 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
         token = newToken
         configurationError = nil
 
-        if let central = subscribedCentral, authorizedCentralID == central.identifier {
+        if let central = subscribedCentral,
+           (authorizedCentralID == central.identifier || pendingAuthorizedCentralID == central.identifier) {
+            pendingAuthorizedCentralID = nil
             authorizedCentralID = nil
             state = .authenticationFailed
             sendMessage([
@@ -213,7 +216,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
     }
 
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        logger.info("Peripheral manager state: \(peripheral.state.rawValue, privacy: .public)")
+        logger.info("Peripheral manager state: \(peripheral.state.rawValue)")
         guard configurationError == nil else {
             state = .error("BLE configuration error: \(configurationError!)")
             return
@@ -243,7 +246,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
 
     func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
         let errorDescription = error?.localizedDescription ?? "none"
-        logger.info("GATT service add completed: \(errorDescription, privacy: .public)")
+        logger.info("GATT service add completed: \(errorDescription)")
         if let error {
             serviceAdded = false
             serviceAddPending = false
@@ -257,7 +260,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
 
     func peripheralManagerDidStartAdvertising(_ peripheral: CBPeripheralManager, error: Error?) {
         let errorDescription = error?.localizedDescription ?? "none"
-        logger.info("Advertising start completed: \(errorDescription, privacy: .public)")
+        logger.info("Advertising start completed: \(errorDescription)")
         if let error {
             state = .error("Could not start BLE advertising: \(error.localizedDescription)")
         } else if subscribedCentral == nil {
@@ -272,6 +275,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
             return
         }
         subscribedCentral = central
+        pendingAuthorizedCentralID = nil
         authorizedCentralID = nil
         authRequestID = nil
         assembler.reset()
@@ -380,7 +384,6 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
         logger.info("Starting BLE advertising")
         peripheralManager.startAdvertising([
             CBAdvertisementDataServiceUUIDsKey: [CBUUID(string: BLEProtocol.serviceUUID)],
-            CBAdvertisementDataLocalNameKey: "MacCtrlHTTP",
         ])
     }
 
@@ -416,6 +419,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
             return
         }
         let requestID = message["request_id"] as? String
+        logger.info("Received GATT message type: \(type)")
         guard let requestID, (1...64).contains(requestID.utf8.count) else {
             sendProtocolError(requestID: nil, code: "invalid_request_id")
             return
@@ -434,6 +438,7 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
             }
             authRequestID = requestID
             guard constantTimeEqual(suppliedToken, configuration.token) else {
+                pendingAuthorizedCentralID = nil
                 authorizedCentralID = nil
                 state = .authenticationFailed
                 sendMessage([
@@ -444,13 +449,28 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
                 ])
                 return
             }
-            authorizedCentralID = central.identifier
-            state = .ready
+            pendingAuthorizedCentralID = central.identifier
+            authorizedCentralID = nil
+            state = .authorizing
+            logger.info("BLE token accepted; awaiting central confirmation")
             sendMessage([
                 "version": BLEProtocol.version,
                 "type": "auth_ok",
                 "request_id": requestID,
             ])
+            return
+        }
+
+        if type == "auth_confirm" {
+            guard requestID == authRequestID,
+                  pendingAuthorizedCentralID == central.identifier else {
+                sendProtocolError(requestID: requestID, code: "authentication_not_pending")
+                return
+            }
+            pendingAuthorizedCentralID = nil
+            authorizedCentralID = central.identifier
+            state = .ready
+            logger.info("Central confirmed BLE authentication")
             return
         }
 
@@ -583,6 +603,8 @@ final class BLEPeripheralManager: NSObject, ObservableObject, @preconcurrency CB
     }
 
     private func resetSession(error: Error) {
+        logger.info("Reset BLE session: \(error.localizedDescription)")
+        pendingAuthorizedCentralID = nil
         authorizedCentralID = nil
         subscribedCentral = nil
         authRequestID = nil
