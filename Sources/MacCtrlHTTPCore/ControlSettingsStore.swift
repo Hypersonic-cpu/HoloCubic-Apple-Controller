@@ -12,30 +12,46 @@ public struct UserDefaultsControlSettingsStore: ControlSettingsStore {
     private let defaults: UserDefaults
     private let bufferSizeKey: String
     private let keyDelayKey: String
+    private let migratesLegacyValue: Bool
 
     public init(
-        defaults: UserDefaults = .standard,
+        defaults: UserDefaults? = nil,
         bufferSizeKey: String = "bufferSize",
         keyDelayKey: String = "keyDelayMilliseconds"
     ) {
-        self.defaults = defaults
+        self.defaults = defaults ?? AppSharedPreferences.defaults
         self.bufferSizeKey = bufferSizeKey
         self.keyDelayKey = keyDelayKey
+        self.migratesLegacyValue = defaults == nil
     }
 
     public func loadBufferSize() -> Int? {
-        defaults.object(forKey: bufferSizeKey) as? Int
+        if migratesLegacyValue {
+            return AppSharedPreferences.value(forKey: bufferSizeKey) as? Int
+        }
+        return defaults.object(forKey: bufferSizeKey) as? Int
     }
 
     public func saveBufferSize(_ value: Int) {
-        defaults.set(value, forKey: bufferSizeKey)
+        if migratesLegacyValue {
+            AppSharedPreferences.save(value, forKey: bufferSizeKey)
+        } else {
+            defaults.set(value, forKey: bufferSizeKey)
+        }
     }
 
     public func loadKeyDelayMilliseconds() -> Int? {
-        defaults.object(forKey: keyDelayKey) as? Int
+        if migratesLegacyValue {
+            return AppSharedPreferences.value(forKey: keyDelayKey) as? Int
+        }
+        return defaults.object(forKey: keyDelayKey) as? Int
     }
 
     public func saveKeyDelayMilliseconds(_ value: Int) {
-        defaults.set(value, forKey: keyDelayKey)
+        if migratesLegacyValue {
+            AppSharedPreferences.save(value, forKey: keyDelayKey)
+        } else {
+            defaults.set(value, forKey: keyDelayKey)
+        }
     }
 }

@@ -2,49 +2,27 @@
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-cd "$ROOT_DIR"
-
-swift build -c release --product MacCtrlHTTP
+BUILD_ROOT="$ROOT_DIR/build/Xcode"
+DERIVED_DATA="$BUILD_ROOT/DerivedData"
+PRODUCT_APP="$DERIVED_DATA/Build/Products/Release/MacCtrlHTTP.app"
 APP_DIR="$ROOT_DIR/build/MacCtrlHTTP.app"
-CONTENTS_DIR="$APP_DIR/Contents"
-MACOS_DIR="$CONTENTS_DIR/MacOS"
+WIDGET="$APP_DIR/Contents/PlugIns/WidgetExtension.appex"
+
+xcodebuild -quiet -jobs 1 \
+    -project "$ROOT_DIR/MacCtrlHTTP.xcodeproj" \
+    -scheme MacCtrlHTTP \
+    -configuration Release \
+    -destination 'platform=macOS' \
+    -derivedDataPath "$DERIVED_DATA" \
+    CODE_SIGNING_ALLOWED=NO \
+    clean build
 
 rm -rf "$APP_DIR"
-mkdir -p "$MACOS_DIR"
-cp "$ROOT_DIR/.build/release/MacCtrlHTTP" "$MACOS_DIR/MacCtrlHTTP"
-cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>MacCtrlHTTP</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.clocteck.MacCtrlHTTP</string>
-    <key>CFBundleName</key>
-    <string>MacCtrlHTTP</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.utilities</string>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsLocalNetworking</key>
-        <true/>
-    </dict>
-    <key>NSLocalNetworkUsageDescription</key>
-    <string>MacCtrlHTTP sends controller buttons to your HoloCubic on the local network.</string>
-</dict>
-</plist>
-PLIST
+ditto "$PRODUCT_APP" "$APP_DIR"
+
+# Ad-hoc signatures keep the local development build runnable without a Developer ID.
+codesign --force --sign - --entitlements "$ROOT_DIR/WidgetExtension/WidgetExtension.entitlements" "$WIDGET"
+codesign --force --sign - --entitlements "$ROOT_DIR/MacCtrlHTTP.entitlements" "$APP_DIR"
+codesign --verify --deep --strict "$APP_DIR"
+
 printf 'Built %s\n' "$APP_DIR"

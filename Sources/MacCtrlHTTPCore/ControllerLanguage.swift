@@ -24,7 +24,7 @@ public enum ControllerLanguage: String, CaseIterable, Identifiable, Sendable {
     }
 
     public static var preferred: ControllerLanguage {
-        guard let stored = UserDefaults.standard.string(forKey: preferenceKey) else {
+        guard let stored = AppSharedPreferences.value(forKey: preferenceKey) as? String else {
             return .chinese
         }
         return ControllerLanguage(rawValue: stored) ?? .chinese
@@ -53,6 +53,13 @@ public enum ControllerLanguage: String, CaseIterable, Identifiable, Sendable {
             .unsupportedBuffer: "Onboard ActionCtrlHTTP 尚不支持 BUFFER SIZE 同步，请更新服务", .deviceRejected: "设备拒绝请求（HTTP %d）",
             .directionPad: "方向键", .homeHelp: "Home：返回 Launcher", .keyboardLegend: "← ↑ ↓ →  ·  A / B · Home",
             .up: "上", .down: "下", .left: "左", .right: "右", .home: "主页", .expanded: "已展开", .collapsed: "已折叠",
+            .controlTransport: "CONTROL TRANSPORT", .transportAuto: "自动 · HTTP 优先", .transportHTTP: "仅 HTTP", .transportBLE: "仅 BLE",
+            .httpStatus: "HTTP", .bleStatus: "BLE", .bleToken: "BLE TOKEN", .bleTokenPlaceholder: "输入 BLE 调试 Token",
+            .bleConfigLocation: "配置文件：%@", .advertiseBLE: "BLE 广播", .statusAvailable: "可用", .statusUnavailable: "不可用",
+            .bleDisabled: "已关闭", .bleAdvertising: "广播中", .bleConnected: "已连接", .bleAuthorizing: "认证中", .bleReady: "已授权",
+            .bleAuthenticationFailed: "认证失败", .bleBluetoothOff: "蓝牙已关闭", .bleError: "错误：%@", .bleOnlyQueueSync: "BLE 已连接；可通过 BLE 同步队列容量",
+            .bleTokenSaved: "BLE Token 已保存", .bleConfigError: "BLE 配置无法读取，请检查文件",
+            .invalidBLEToken: "BLE Token 长度必须为 1–256 字节",
         ],
         .english: [
             .languageMenu: "Language", .appSubtitle: "Local Network Controller", .online: "Online", .connecting: "Connecting", .waiting: "Offline",
@@ -76,6 +83,13 @@ public enum ControllerLanguage: String, CaseIterable, Identifiable, Sendable {
             .unsupportedBuffer: "This ActionCtrlHTTP version cannot sync BUFFER SIZE; update the service", .deviceRejected: "The device rejected the request (HTTP %d)",
             .directionPad: "Directional pad", .homeHelp: "Home: return to Launcher", .keyboardLegend: "← ↑ ↓ →  ·  A / B · Home",
             .up: "Up", .down: "Down", .left: "Left", .right: "Right", .home: "Home", .expanded: "Expanded", .collapsed: "Collapsed",
+            .controlTransport: "CONTROL TRANSPORT", .transportAuto: "Auto · HTTP first", .transportHTTP: "HTTP Only", .transportBLE: "BLE Only",
+            .httpStatus: "HTTP", .bleStatus: "BLE", .bleToken: "BLE TOKEN", .bleTokenPlaceholder: "BLE debug token",
+            .bleConfigLocation: "Config file: %@", .advertiseBLE: "BLE advertising", .statusAvailable: "Available", .statusUnavailable: "Unavailable",
+            .bleDisabled: "Disabled", .bleAdvertising: "Advertising", .bleConnected: "Connected", .bleAuthorizing: "Authorizing", .bleReady: "Authorized",
+            .bleAuthenticationFailed: "Authentication failed", .bleBluetoothOff: "Bluetooth is off", .bleError: "Error: %@", .bleOnlyQueueSync: "BLE online; queue size sync is available over BLE",
+            .bleTokenSaved: "BLE token saved", .bleConfigError: "Could not read BLE config; check the file",
+            .invalidBLEToken: "BLE token must be 1–256 bytes",
         ],
         .french: [
             .languageMenu: "Langue", .appSubtitle: "Manette sur réseau local", .online: "En ligne", .connecting: "Connexion…", .waiting: "Hors ligne",
@@ -99,6 +113,13 @@ public enum ControllerLanguage: String, CaseIterable, Identifiable, Sendable {
             .unsupportedBuffer: "Cette version ne synchronise pas la taille de file ; mettez-la à jour", .deviceRejected: "Requête refusée par l’appareil (HTTP %d)",
             .directionPad: "Pavé directionnel", .homeHelp: "Accueil : revenir au Launcher", .keyboardLegend: "← ↑ ↓ →  ·  A / B · Home",
             .up: "Haut", .down: "Bas", .left: "Gauche", .right: "Droite", .home: "Accueil", .expanded: "Développé", .collapsed: "Replié",
+            .controlTransport: "TRANSPORT DE CONTRÔLE", .transportAuto: "Auto · HTTP d’abord", .transportHTTP: "HTTP uniquement", .transportBLE: "BLE uniquement",
+            .httpStatus: "HTTP", .bleStatus: "BLE", .bleToken: "JETON BLE", .bleTokenPlaceholder: "Jeton BLE de débogage",
+            .bleConfigLocation: "Fichier de configuration : %@", .advertiseBLE: "Publicité BLE", .statusAvailable: "Disponible", .statusUnavailable: "Indisponible",
+            .bleDisabled: "Désactivé", .bleAdvertising: "Diffusion", .bleConnected: "Connecté", .bleAuthorizing: "Autorisation…", .bleReady: "Autorisé",
+            .bleAuthenticationFailed: "Échec de l’authentification", .bleBluetoothOff: "Bluetooth désactivé", .bleError: "Erreur : %@", .bleOnlyQueueSync: "BLE en ligne ; la file peut être synchronisée par BLE",
+            .bleTokenSaved: "Jeton BLE enregistré", .bleConfigError: "Configuration BLE illisible ; vérifiez le fichier",
+            .invalidBLEToken: "Le jeton BLE doit contenir de 1 à 256 octets",
         ],
     ]
 }
@@ -112,4 +133,7 @@ public enum ControllerCopy: String, CaseIterable, Sendable {
     case settingsSyncing, missingAuth, invalidAddress, repeatLimited, ready, sendingTap, sendingHold, duplicate, tapSent, holdSent
     case requestFailed, invalidDeviceAddress, invalidHoldDuration, invalidResponse, tokenMismatch, serviceBusy, queueFull, serviceNotReady, unsupportedBuffer, deviceRejected
     case directionPad, homeHelp, keyboardLegend, up, down, left, right, home, expanded, collapsed
+    case controlTransport, transportAuto, transportHTTP, transportBLE, httpStatus, bleStatus, bleToken, bleTokenPlaceholder
+    case bleConfigLocation, advertiseBLE, statusAvailable, statusUnavailable, bleDisabled, bleAdvertising, bleConnected
+    case bleAuthorizing, bleReady, bleAuthenticationFailed, bleBluetoothOff, bleError, bleOnlyQueueSync, bleTokenSaved, bleConfigError, invalidBLEToken
 }

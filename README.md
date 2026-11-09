@@ -4,7 +4,7 @@ A small translucent macOS controller for the HoloCubic `ActionCtrlHTTP` service.
 
 ## Build and launch
 
-Requires macOS 13 or later and Xcode Command Line Tools.
+Requires macOS 14 or later and Xcode Command Line Tools. The widget uses interactive App Intents and needs a WidgetKit extension.
 
 ```sh
 ./scripts/build-app.sh
@@ -14,6 +14,10 @@ Requires macOS 13 or later and Xcode Command Line Tools.
 The device IP is entered in the app and automatically saved in its macOS preferences. The app does not depend on an environment variable.
 
 The app includes a `Language` menu in the macOS menu bar with Simplified Chinese, English, and French. The Settings section can be collapsed to shrink the window; its expanded state is saved.
+
+The WidgetKit extension is packaged with the app. To add and use it, both targets must be signed with a registered App Group entitlement so the widget can read the app's saved device address, token, and language. The current local build is ad-hoc signed and cannot share those settings, so its widget is not ready to add from the gallery yet. Once a registered App Group and matching signing profile are configured, add **HoloCubic Controls** from the macOS widget gallery in the small square size. It has directional, A, B, and Home buttons plus a text-and-symbol connection indicator; its shapes and symbols remain distinguishable in tinted mode.
+
+`scripts/build-app.sh` uses the Xcode project to package both the app and widget extension, then ad-hoc signs them for local use. Store or Developer ID distribution requires signing both targets with the same Apple development team and provisioning the App Group.
 
 ## Use
 

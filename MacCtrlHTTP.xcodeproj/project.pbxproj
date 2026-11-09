@@ -1,0 +1,170 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* MacCtrlHTTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* MacCtrlHTTPApp.swift */; };
+		A10000000000000000000002 /* ControlPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* ControlPanelView.swift */; };
+		A10000000000000000000003 /* ControlPanelModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* ControlPanelModel.swift */; };
+		A10000000000000000000004 /* WidgetTapIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* WidgetTapIntent.swift */; };
+		A10000000000000000000005 /* ControlWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* ControlWidget.swift */; };
+		A10000000000000000000006 /* WidgetTapIntent.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* WidgetTapIntent.swift */; };
+		A10000000000000000000008 /* WidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* WidgetExtension.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000009 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000001 /* InfoPlist.strings */; };
+		A10000000000000000000010 /* ActionCtrlHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* ActionCtrlHTTPClient.swift */; };
+		A10000000000000000000011 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* TokenStore.swift */; };
+		A10000000000000000000012 /* RemoteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* RemoteButton.swift */; };
+		A10000000000000000000013 /* ControlSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* ControlSettingsStore.swift */; };
+		A10000000000000000000014 /* AppSharedPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* AppSharedPreferences.swift */; };
+		A10000000000000000000015 /* ControllerLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* ControllerLanguage.swift */; };
+		A10000000000000000000016 /* BLEConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* BLEConfiguration.swift */; };
+		A10000000000000000000017 /* BLEPeripheralManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* BLEPeripheralManager.swift */; };
+		A10000000000000000000018 /* ControlTransportMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* ControlTransportMode.swift */; };
+		A10000000000000000000019 /* BLEProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* BLEProtocol.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A50000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A40000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A70000000000000000000002;
+			remoteInfo = WidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A80000000000000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (A10000000000000000000008 /* WidgetExtension.appex in Embed App Extensions */, );
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* MacCtrlHTTPApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCtrlHTTPApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* ControlPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanelView.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* ControlPanelModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanelModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* WidgetTapIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTapIntent.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* ControlWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlWidget.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* AppInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = AppInfo.plist; sourceTree = "<group>"; };
+		A20000000000000000000007 /* MacCtrlHTTP.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacCtrlHTTP.entitlements; sourceTree = "<group>"; };
+		A20000000000000000000008 /* WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000009 /* MacCtrlHTTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacCtrlHTTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000010 /* WidgetInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000011 /* WidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WidgetExtension.entitlements; sourceTree = "<group>"; };
+		A20000000000000000000012 /* en InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A20000000000000000000013 /* fr InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A20000000000000000000014 /* zh-Hans InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A20000000000000000000015 /* ActionCtrlHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCtrlHTTPClient.swift; sourceTree = "<group>"; };
+		A20000000000000000000016 /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000017 /* RemoteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteButton.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* ControlSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlSettingsStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000019 /* AppSharedPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSharedPreferences.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* ControllerLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerLanguage.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 /* BLEConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEConfiguration.swift; sourceTree = "<group>"; };
+		A20000000000000000000022 /* BLEPeripheralManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEPeripheralManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000023 /* ControlTransportMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlTransportMode.swift; sourceTree = "<group>"; };
+		A20000000000000000000024 /* BLEProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEProtocol.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A90000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A90000000000000000000002 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000000000000000000001 = {
+			isa = PBXGroup;
+			children = (AA0000000000000000000002 /* Sources */, AA0000000000000000000006 /* Core */, AA0000000000000000000003 /* Shared */, AA0000000000000000000004 /* WidgetExtension */, A20000000000000000000006 /* AppInfo.plist */, A20000000000000000000007 /* MacCtrlHTTP.entitlements */, AA0000000000000000000005 /* Products */, );
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000002 /* Sources */ = {isa = PBXGroup; children = (A20000000000000000000001 /* MacCtrlHTTPApp.swift */, A20000000000000000000002 /* ControlPanelView.swift */, A20000000000000000000003 /* ControlPanelModel.swift */, A20000000000000000000021 /* BLEConfiguration.swift */, A20000000000000000000022 /* BLEPeripheralManager.swift */, ); path = Sources/MacCtrlHTTP; sourceTree = "<group>"; };
+		AA0000000000000000000006 /* Core */ = {isa = PBXGroup; children = (A20000000000000000000015 /* ActionCtrlHTTPClient.swift */, A20000000000000000000016 /* TokenStore.swift */, A20000000000000000000017 /* RemoteButton.swift */, A20000000000000000000018 /* ControlSettingsStore.swift */, A20000000000000000000019 /* AppSharedPreferences.swift */, A20000000000000000000020 /* ControllerLanguage.swift */, A20000000000000000000023 /* ControlTransportMode.swift */, A20000000000000000000024 /* BLEProtocol.swift */, ); path = Sources/MacCtrlHTTPCore; sourceTree = "<group>"; };
+		AA0000000000000000000003 /* Shared */ = {isa = PBXGroup; children = (A20000000000000000000004 /* WidgetTapIntent.swift */, ); path = Shared; sourceTree = "<group>"; };
+		AA0000000000000000000004 /* WidgetExtension */ = {isa = PBXGroup; children = (A20000000000000000000005 /* ControlWidget.swift */, A20000000000000000000010 /* WidgetInfo.plist */, A20000000000000000000011 /* WidgetExtension.entitlements */, A30000000000000000000001 /* InfoPlist.strings */, ); path = WidgetExtension; sourceTree = "<group>"; };
+		AA0000000000000000000005 /* Products */ = {isa = PBXGroup; children = (A20000000000000000000009 /* MacCtrlHTTP.app */, A20000000000000000000008 /* WidgetExtension.appex */, ); name = Products; sourceTree = "<group>"; };
+		A30000000000000000000001 /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (A20000000000000000000012 /* en InfoPlist.strings */, A20000000000000000000013 /* fr InfoPlist.strings */, A20000000000000000000014 /* zh-Hans InfoPlist.strings */, ); name = InfoPlist.strings; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A70000000000000000000001 /* MacCtrlHTTP */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0000000000000000000001 /* Build configuration list for PBXNativeTarget "MacCtrlHTTP" */;
+			buildPhases = (A80000000000000000000002 /* Sources */, A90000000000000000000001 /* Frameworks */, A80000000000000000000003 /* Resources */, A80000000000000000000001 /* Embed App Extensions */, );
+			buildRules = ();
+			dependencies = (A50000000000000000000002 /* PBXTargetDependency */, );
+			name = MacCtrlHTTP;
+			packageProductDependencies = ();
+			productName = MacCtrlHTTP;
+			productReference = A20000000000000000000009 /* MacCtrlHTTP.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A70000000000000000000002 /* WidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0000000000000000000002 /* Build configuration list for PBXNativeTarget "WidgetExtension" */;
+			buildPhases = (A80000000000000000000004 /* Sources */, A90000000000000000000002 /* Frameworks */, A80000000000000000000005 /* Resources */, );
+			buildRules = ();
+			dependencies = ();
+			name = WidgetExtension;
+			packageProductDependencies = ();
+			productName = WidgetExtension;
+			productReference = A20000000000000000000008 /* WidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A40000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 2700; TargetAttributes = {A70000000000000000000001 = {CreatedOnToolsVersion = 27.2; }; A70000000000000000000002 = {CreatedOnToolsVersion = 27.2; }; }; };
+			buildConfigurationList = AB0000000000000000000003 /* Build configuration list for PBXProject "MacCtrlHTTP" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, fr, "zh-Hans", Base, );
+			mainGroup = AA0000000000000000000001;
+			productRefGroup = AA0000000000000000000005 /* Products */;
+			targets = (A70000000000000000000001 /* MacCtrlHTTP */, A70000000000000000000002 /* WidgetExtension */, );
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A80000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A80000000000000000000005 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000009 /* InfoPlist.strings in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A80000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* MacCtrlHTTPApp.swift in Sources */, A10000000000000000000002 /* ControlPanelView.swift in Sources */, A10000000000000000000003 /* ControlPanelModel.swift in Sources */, A10000000000000000000010 /* ActionCtrlHTTPClient.swift in Sources */, A10000000000000000000011 /* TokenStore.swift in Sources */, A10000000000000000000012 /* RemoteButton.swift in Sources */, A10000000000000000000013 /* ControlSettingsStore.swift in Sources */, A10000000000000000000014 /* AppSharedPreferences.swift in Sources */, A10000000000000000000015 /* ControllerLanguage.swift in Sources */, A10000000000000000000016 /* BLEConfiguration.swift in Sources */, A10000000000000000000017 /* BLEPeripheralManager.swift in Sources */, A10000000000000000000018 /* ControlTransportMode.swift in Sources */, A10000000000000000000019 /* BLEProtocol.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		A80000000000000000000004 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000005 /* ControlWidget.swift in Sources */, A10000000000000000000006 /* WidgetTapIntent.swift in Widget Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AC0000000000000000000001 /* Debug project */ = {isa = XCBuildConfiguration; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Debug; };
+		AC0000000000000000000002 /* Release project */ = {isa = XCBuildConfiguration; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Release; };
+		AC0000000000000000000003 /* Debug app */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = MacCtrlHTTP.entitlements; CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; CURRENT_PROJECT_VERSION = 2; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = AppInfo.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.clocteck.MacCtrlHTTP; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; }; name = Debug; };
+		AC0000000000000000000004 /* Release app */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = MacCtrlHTTP.entitlements; CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; CURRENT_PROJECT_VERSION = 2; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = AppInfo.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.clocteck.MacCtrlHTTP; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_VERSION = 5.0; }; name = Release; };
+		AC0000000000000000000005 /* Debug widget */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = WidgetExtension/WidgetExtension.entitlements; CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; CURRENT_PROJECT_VERSION = 2; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = WidgetExtension/Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.clocteck.MacCtrlHTTP.WidgetExtension; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; }; name = Debug; };
+		AC0000000000000000000006 /* Release widget */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = WidgetExtension/WidgetExtension.entitlements; CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; CURRENT_PROJECT_VERSION = 2; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = WidgetExtension/Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.clocteck.MacCtrlHTTP.WidgetExtension; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_VERSION = 5.0; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AB0000000000000000000001 /* Build configuration list for PBXNativeTarget "MacCtrlHTTP" */ = {isa = XCConfigurationList; buildConfigurations = (AC0000000000000000000003 /* Debug app */, AC0000000000000000000004 /* Release app */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		AB0000000000000000000002 /* Build configuration list for PBXNativeTarget "WidgetExtension" */ = {isa = XCConfigurationList; buildConfigurations = (AC0000000000000000000005 /* Debug widget */, AC0000000000000000000006 /* Release widget */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		AB0000000000000000000003 /* Build configuration list for PBXProject "MacCtrlHTTP" */ = {isa = XCConfigurationList; buildConfigurations = (AC0000000000000000000001 /* Debug project */, AC0000000000000000000002 /* Release project */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin PBXTargetDependency section */
+		A50000000000000000000002 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A70000000000000000000002 /* WidgetExtension */; targetProxy = A50000000000000000000001 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+	};
+	rootObject = A40000000000000000000001 /* Project object */;
+}

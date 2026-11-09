@@ -10,26 +10,39 @@ public protocol TokenStore {
 public struct UserDefaultsTokenStore: TokenStore {
     private let defaults: UserDefaults
     private let key: String
+    private let migratesLegacyValue: Bool
 
-    public init(defaults: UserDefaults = .standard, key: String = "actionCtrlToken") {
-        self.defaults = defaults
+    public init(defaults: UserDefaults? = nil, key: String = "actionCtrlToken") {
+        self.defaults = defaults ?? AppSharedPreferences.defaults
         self.key = key
+        self.migratesLegacyValue = defaults == nil
     }
 
     public func load() throws -> String? {
-        defaults.string(forKey: key)
+        if migratesLegacyValue {
+            return AppSharedPreferences.value(forKey: key) as? String
+        }
+        return defaults.object(forKey: key) as? String
     }
 
     public func save(_ token: String) throws {
         if token.isEmpty {
             clear()
         } else {
-            defaults.set(token, forKey: key)
+            if migratesLegacyValue {
+                AppSharedPreferences.save(token, forKey: key)
+            } else {
+                defaults.set(token, forKey: key)
+            }
         }
     }
 
     public func clear() {
-        defaults.removeObject(forKey: key)
+        if migratesLegacyValue {
+            AppSharedPreferences.removeValue(forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
     }
 }
 
@@ -42,21 +55,34 @@ public protocol DeviceAddressStore {
 public struct UserDefaultsDeviceAddressStore: DeviceAddressStore {
     private let defaults: UserDefaults
     private let key: String
+    private let migratesLegacyValue: Bool
 
-    public init(defaults: UserDefaults = .standard, key: String = "deviceAddress") {
-        self.defaults = defaults
+    public init(defaults: UserDefaults? = nil, key: String = "deviceAddress") {
+        self.defaults = defaults ?? AppSharedPreferences.defaults
         self.key = key
+        self.migratesLegacyValue = defaults == nil
     }
 
     public func load() throws -> String? {
-        defaults.string(forKey: key)
+        if migratesLegacyValue {
+            return AppSharedPreferences.value(forKey: key) as? String
+        }
+        return defaults.object(forKey: key) as? String
     }
 
     public func save(_ address: String) throws {
         if address.isEmpty {
-            defaults.removeObject(forKey: key)
+            if migratesLegacyValue {
+                AppSharedPreferences.removeValue(forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
         } else {
-            defaults.set(address, forKey: key)
+            if migratesLegacyValue {
+                AppSharedPreferences.save(address, forKey: key)
+            } else {
+                defaults.set(address, forKey: key)
+            }
         }
     }
 }

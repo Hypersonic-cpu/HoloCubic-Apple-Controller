@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "MacCtrlHTTP",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
     products: [
         .executable(name: "MacCtrlHTTP", targets: ["MacCtrlHTTP"]),
         .library(name: "MacCtrlHTTPCore", targets: ["MacCtrlHTTPCore"]),

@@ -3,12 +3,13 @@ import AppKit
 import MacCtrlHTTPCore
 #endif
 import SwiftUI
+import WidgetKit
 
 struct ControlPanelView: View {
     @StateObject private var model = ControlPanelModel()
-    @AppStorage(ControllerLanguage.preferenceKey, store: UserDefaults.standard)
+    @AppStorage(ControllerLanguage.preferenceKey, store: AppSharedPreferences.defaults)
     private var languageCode = ControllerLanguage.chinese.rawValue
-    @AppStorage("settingsExpanded", store: UserDefaults.standard)
+    @AppStorage("settingsExpanded", store: AppSharedPreferences.defaults)
     private var settingsExpanded = true
     @FocusState private var focusedInput: InputField?
 
@@ -55,26 +56,29 @@ struct ControlPanelView: View {
                 return true
             }
         ).frame(width: 1, height: 1))
-        .onChange(of: model.token) { newValue in
+        .onChange(of: model.token) { _, newValue in
             model.saveToken(newValue)
+            WidgetCenter.shared.reloadAllTimelines()
         }
-        .onChange(of: model.deviceAddress) { newValue in
+        .onChange(of: model.deviceAddress) { _, newValue in
             model.saveDeviceAddress(newValue)
+            WidgetCenter.shared.reloadAllTimelines()
         }
-        .onChange(of: model.bufferSize) { newValue in model.saveBufferSize(newValue) }
-        .onChange(of: model.keyDelayMilliseconds) { newValue in model.saveKeyDelay(newValue) }
-        .onChange(of: languageCode) { newValue in
-            UserDefaults.standard.set(newValue, forKey: ControllerLanguage.preferenceKey)
-            UserDefaults.standard.synchronize()
+        .onChange(of: model.bufferSize) { _, newValue in model.saveBufferSize(newValue) }
+        .onChange(of: model.keyDelayMilliseconds) { _, newValue in model.saveKeyDelay(newValue) }
+        .onReceive(model.bleManager.$state) { _ in model.refreshTransportStatus() }
+        .onChange(of: languageCode) { _, newValue in
+            AppSharedPreferences.save(newValue, forKey: ControllerLanguage.preferenceKey)
             model.setLanguage(ControllerLanguage(rawValue: newValue) ?? .chinese)
+            WidgetCenter.shared.reloadAllTimelines()
         }
-        .onChange(of: settingsExpanded) { newValue in
-            UserDefaults.standard.set(newValue, forKey: "settingsExpanded")
-            UserDefaults.standard.synchronize()
+        .onChange(of: settingsExpanded) { _, newValue in
+            AppSharedPreferences.save(newValue, forKey: "settingsExpanded")
         }
         .onAppear {
             model.setLanguage(language)
             model.checkConnection()
+            WidgetCenter.shared.reloadAllTimelines()
         }
         .animation(.easeInOut(duration: 0.2), value: settingsExpanded)
         .preferredColorScheme(.dark)
@@ -170,6 +174,7 @@ struct ControlPanelView: View {
                 VStack(alignment: .leading, spacing: 9) {
                     tokenEntry
                     addressEntry
+                    transportSettings
                     settingControls
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -344,6 +349,80 @@ struct ControlPanelView: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    private var transportSettings: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            settingLabel(language.text(.controlTransport))
+            Picker(language.text(.controlTransport), selection: Binding(
+                get: { model.transportMode },
+                set: { model.setTransportMode($0) }
+            )) {
+                ForEach(ControlTransportMode.allCases) { mode in
+                    Text(mode.title(in: language)).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            HStack(spacing: 6) {
+                statusIndicator(
+                    title: language.text(.httpStatus),
+                    value: language.text(model.httpOnline ? .statusAvailable : .statusUnavailable),
+                    symbol: "network",
+                    active: model.httpOnline
+                )
+                statusIndicator(
+                    title: language.text(.bleStatus),
+                    value: model.bleStateMessage,
+                    symbol: "dot.radiowaves.left.and.right",
+                    active: model.bleManager.state.canControl
+                )
+            }
+
+            HStack(spacing: 8) {
+                Toggle(isOn: Binding(
+                    get: { model.bleManager.advertiseOnLaunch },
+                    set: { model.setBLEAdvertising($0) }
+                )) {
+                    Text(language.text(.advertiseBLE))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                Spacer(minLength: 4)
+            }
+            Text(language.text(.bleConfigLocation, model.bleManager.configurationPath))
+                .font(.system(size: 8, weight: .regular, design: .monospaced))
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .help(model.bleManager.configurationPath)
+        }
+    }
+
+    private func statusIndicator(title: String, value: String, symbol: String, active: Bool) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(active ? Color.green : Color.secondary)
+            Text(title)
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .foregroundStyle(.tertiary)
+            Text(value)
+                .font(.system(size: 8, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
+        .frame(height: 26)
+        .background(.white.opacity(0.055), in: Capsule())
+        .overlay(Capsule().strokeBorder(.white.opacity(0.08), lineWidth: 1))
+        .help("\(title): \(value)")
     }
 
     private var syncButtonColor: Color {

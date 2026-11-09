@@ -91,16 +91,24 @@ public struct ActionCtrlHTTPClient {
     public let baseURL: URL
     private let token: String
     private let transport: any HTTPTransport
+    private let timeoutInterval: TimeInterval
 
-    public init(baseURL: URL, token: String, transport: any HTTPTransport = URLSessionTransport()) {
+    public init(
+        baseURL: URL,
+        token: String,
+        transport: any HTTPTransport = URLSessionTransport(),
+        timeoutInterval: TimeInterval = 60
+    ) {
         self.baseURL = baseURL
         self.token = token
         self.transport = transport
+        self.timeoutInterval = timeoutInterval
     }
 
     public func status() async throws -> ActionStatus {
         var request = URLRequest(url: endpoint("status"))
         request.httpMethod = "GET"
+        request.timeoutInterval = timeoutInterval
         addAuthentication(to: &request)
 
         let (data, response) = try await transport.data(for: request)
@@ -119,6 +127,7 @@ public struct ActionCtrlHTTPClient {
     public func setQueueCapacity(_ capacity: Int) async throws -> QueueCapacityReceipt {
         var request = URLRequest(url: endpoint("settings"))
         request.httpMethod = "POST"
+        request.timeoutInterval = timeoutInterval
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(QueueCapacityRequest(queueCapacity: capacity))
         addAuthentication(to: &request)
@@ -140,16 +149,21 @@ public struct ActionCtrlHTTPClient {
     }
 
     @discardableResult
-    public func tap(_ button: RemoteButton, holdMilliseconds: Int? = nil) async throws -> TapReceipt {
+    public func tap(
+        _ button: RemoteButton,
+        holdMilliseconds: Int? = nil,
+        requestID: String? = nil
+    ) async throws -> TapReceipt {
         if let holdMilliseconds, !(120...5000).contains(holdMilliseconds) {
             throw ActionClientError.invalidHoldDuration
         }
         var request = URLRequest(url: endpoint("tap"))
         request.httpMethod = "POST"
+        request.timeoutInterval = timeoutInterval
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(TapRequest(
             button: button.rawValue,
-            requestID: "mac-\(UUID().uuidString.lowercased())",
+            requestID: requestID ?? "mac-\(UUID().uuidString.lowercased())",
             holdMilliseconds: holdMilliseconds
         ))
         addAuthentication(to: &request)

@@ -7,7 +7,7 @@ import SwiftUI
 @main
 struct MacCtrlHTTPApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @AppStorage(ControllerLanguage.preferenceKey, store: UserDefaults.standard)
+    @AppStorage(ControllerLanguage.preferenceKey, store: AppSharedPreferences.defaults)
     private var languageCode = ControllerLanguage.chinese.rawValue
 
     private var language: ControllerLanguage {
@@ -37,8 +37,7 @@ struct MacCtrlHTTPApp: App {
                 ForEach(ControllerLanguage.allCases) { option in
                     Button {
                         languageCode = option.rawValue
-                        UserDefaults.standard.set(option.rawValue, forKey: ControllerLanguage.preferenceKey)
-                        UserDefaults.standard.synchronize()
+                        AppSharedPreferences.save(option.rawValue, forKey: ControllerLanguage.preferenceKey)
                     } label: {
                         HStack {
                             if option == language {
