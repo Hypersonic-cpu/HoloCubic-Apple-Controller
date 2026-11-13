@@ -1,10 +1,18 @@
 # MacCtrlHTTP
 
-A small translucent macOS controller for the HoloCubic `ActionCtrlHTTP` service.
+A small translucent macOS controller for the HoloCubic `ActionCtrlHTTP` service. Make sure the corresponding apps (`ActionCtrlHTTP` and `ActionCtrlBLE`) are launched in background on Holocubic device. Then launch this program on macOS.
 
 ## Build and launch
 
 Requires macOS 14 or later and the full Xcode installation selected with `xcode-select`. The widget uses interactive App Intents and needs a WidgetKit extension.
+
+```sh
+cd scripts/
+chmod +x ./run-app.sh
+./run-app.sh
+```
+
+Or
 
 ```sh
 xcodebuild -project MacCtrlHTTP.xcodeproj -scheme MacCtrlHTTP \
