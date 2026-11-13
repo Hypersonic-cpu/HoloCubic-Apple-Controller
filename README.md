@@ -1,6 +1,6 @@
 # MacCtrlHTTP
 
-A small translucent macOS controller for the HoloCubic `ActionCtrlHTTP` service. Make sure the corresponding apps (`ActionCtrlHTTP` and `ActionCtrlBLE`) are launched in background on Holocubic device. Then launch this program on macOS.
+A small translucent macOS controller for the HoloCubic `ActionCtrlHTTP` service. Make sure the corresponding apps (`ActionCtrlHTTP` and `ActionCtrlBLE` of [HoloCubic-Apps](https://github.com/Hypersonic-cpu/holocubic-apps)) are launched in background on Holocubic device. Then launch this program on macOS.
 
 ## Build and launch
 
